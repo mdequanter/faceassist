@@ -5,7 +5,7 @@
   <div style="display:flex; flex-wrap:wrap; align-items:flex-end; justify-content:space-between; gap:14px;">
     <div>
       <h1>Faces</h1>
-      <p class="muted" style="margin-top:6px;">Bekende personen uit de map <code>known/</code>.</p>
+      <p class="muted" style="margin-top:6px;">Known persons from the <code>known/</code> directory.</p>
     </div>
   </div>
 
@@ -14,7 +14,7 @@
       <section class="panel" style="display:grid; gap:14px; min-height:520px;">
         <div>
           <h2 style="margin-bottom:4px;">{{ p.name }}</h2>
-          <div class="muted">{{ p.count }} foto{{ "'s" if p.count != 1 else "" }}</div>
+          <div class="muted">{{ p.count }} photo{{ "'s" if p.count != 1 else "" }}</div>
         </div>
 
         {% if p.preview %}
@@ -26,7 +26,7 @@
           </a>
         {% else %}
           <div style="min-height:320px; display:flex; align-items:center; justify-content:center; text-align:center; border:1px dashed #bbb; border-radius:12px; padding:18px; background:#fff;">
-            <p class="muted" style="margin:0;">Nog geen foto's in <code>known/{{ p.name }}/</code>.</p>
+            <p class="muted" style="margin:0;">No photos found in <code>known/{{ p.name }}/</code>.</p>
           </div>
         {% endif %}
 
@@ -34,7 +34,7 @@
           <a class="btn btn-primary" href="{{ url_for('known_person_page', person=p.name) }}">Bekijk alle foto's</a>
           <form action="{{ url_for('known_delete') }}" method="post" style="margin:0;">
             <input type="hidden" name="person" value="{{ p.name }}">
-            <button class="btn btn-danger" type="submit" onclick="return confirm('Ben je zeker dat je persoon {{ p.name }} wil verwijderen?');">Verwijder persoon</button>
+            <button class="btn btn-danger" type="submit" onclick="return confirm('Are you sure you want to delete person {{ p.name }}?');">Delete Person</button>
           </form>
         </div>
       </section>
