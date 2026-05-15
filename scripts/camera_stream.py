@@ -160,26 +160,27 @@ def generate_camera_frames(cam_index=0, width=640, height=480, fps=15):
                     box_color = (0, 255, 0) if in_range else (0, 0, 255)
                     cv2.rectangle(frame, (x, y), (x + fw, y + fh), box_color, 2)
 
-                    aligned = recognizer.alignCrop(frame, face)
-                    feat = recognizer.feature(aligned).astype(np.float32)
-                    best_name, best_score, second_score = best_match(recognizer, feat, known)
-
-                    threshold = 0.5
-                    margin = 0.1
-                    confident = (
-                        best_name is not None
-                        and best_score >= threshold
-                        and (best_score - second_score) >= margin
-                    )
-
                     labels = [f"size: {face_size}px"]
                     if face_size < min_face_size:
                         labels.append("too far")
                     elif face_size > max_face_size:
                         labels.append("too close")
 
-                    if confident:
-                        labels.insert(0, best_name)
+                    if in_range:
+                        aligned = recognizer.alignCrop(frame, face)
+                        feat = recognizer.feature(aligned).astype(np.float32)
+                        best_name, best_score, second_score = best_match(recognizer, feat, known)
+
+                        threshold = 0.5
+                        margin = 0.1
+                        confident = (
+                            best_name is not None
+                            and best_score >= threshold
+                            and (best_score - second_score) >= margin
+                        )
+
+                        if confident:
+                            labels.insert(0, best_name)
 
                     label_y = max(24, y - 10)
                     for label in reversed(labels):
