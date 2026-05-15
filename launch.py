@@ -1191,6 +1191,8 @@ def main():
                 x, y, fw, fh = face[:4].astype(int)
                 face_size = min(fw, fh)
 
+                print (f"[QR] Gezicht gedetecteerd voor {qr_registration['person']} ({face_size}px).", flush=True)
+
                 if face_size < args.qr_min_face:
                     if now - qr_registration.get("last_status_at", 0.0) >= 1.0:
                         print(
