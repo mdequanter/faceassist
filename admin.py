@@ -11,21 +11,15 @@ import sys
 
 APP_DIR = os.path.dirname(os.path.abspath(__file__))
 
-print (f"Application directory: {APP_DIR}")
-FACEASSIST_DIR = os.path.abspath(os.path.join( APP_DIR , "faceassist" ))
-SCRIPTS_DIR = os.path.join(FACEASSIST_DIR, "scripts")
-SETTINGS_PATH = os.path.join(FACEASSIST_DIR, "settings.json")
-RECOGNITION_SCRIPT = os.path.join(FACEASSIST_DIR, "nl_launchv2.py")
-DETECTION_CONTROL_PATH = os.path.join(SETTINGS_PATH, "detection_control.json")
+SCRIPTS_DIR = os.path.join(APP_DIR, "scripts")
+SETTINGS_PATH = os.path.join(APP_DIR, "settings.json")
+DETECTION_CONTROL_PATH = os.path.join(APP_DIR, "detection_control.json")
 
 print (DETECTION_CONTROL_PATH)
 
 SERVICE_NAME = os.environ.get("FACEASSIST_SERVICE", "faceassist.service")
 CONFIG_HOST = os.environ.get("CONFIGURATION_HOST", "0.0.0.0")
 CONFIG_PORT = int(os.environ.get("CONFIGURATION_PORT", "5050"))
-
-if FACEASSIST_DIR not in sys.path:
-    sys.path.insert(0, FACEASSIST_DIR)
 
 from scripts.camera_stream import generate_camera_frames
 from scripts.faces import list_known_people_with_photos
