@@ -405,7 +405,7 @@ def append_known_features(known_dir: str, person: str, new_features: list) -> in
     return int(new_stack.shape[0])
 
 
-def play_qr_click(duration_ms: int = 70, frequency: int = 1200, volume: float = 0.35) -> None:
+def play_qr_click(duration_ms: int = 70, frequency: int = 1200, volume: int = 100) -> None:
     try:
         sample_rate = 16000
         sample_count = max(1, int(sample_rate * max(10, duration_ms) / 1000.0))
@@ -421,7 +421,7 @@ def play_qr_click(duration_ms: int = 70, frequency: int = 1200, volume: float = 
             audio[-ramp_len:] *= ramp[::-1]
 
         pcm = np.clip(
-            audio * 32767.0 * max(0.0, min(1.0, float(volume))),
+            audio * 32767.0 * (max(0, min(100, int(volume))) / 100.0),
             -32768,
             32767,
         )
@@ -1126,7 +1126,7 @@ def main():
                         )
 
                         if not args.no_qr_clicks:
-                            play_qr_click()
+                            play_qr_click(volume=args.voice_volume)
 
                     elif speak_enabled and tts_proc is not None and not tts_proc.is_alive():
                         qr_registration["state"] = "capturing"
@@ -1135,7 +1135,7 @@ def main():
                         print("[WAARSCHUWING] TTS-proces is gestopt; foto's nemen.", flush=True)
 
                         if not args.no_qr_clicks:
-                            play_qr_click()
+                            play_qr_click(volume=args.voice_volume)
 
                 if qr_registration["state"] == "countdown" and now >= qr_registration["next_count_at"]:
                     count = qr_registration["next_count"]
@@ -1158,7 +1158,7 @@ def main():
                             )
 
                             if not args.no_qr_clicks:
-                                play_qr_click()
+                                play_qr_click(volume=args.voice_volume)
                     else:
                         if speak_enabled:
                             tts_enqueue(tts_queue, str(count))
@@ -1320,7 +1320,7 @@ def main():
                         qr_registration["last_capture_at"] = now
 
                         if not args.no_qr_clicks:
-                            play_qr_click()
+                            play_qr_click(volume=args.voice_volume)
 
                         print(
                             f"[OK] QR foto {idx}/{args.qr_photo_count}: {p} "
