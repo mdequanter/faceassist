@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% set title = "Faces" %}
+
+{% block content %}
+  <h1>Faces</h1>
+
+  <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(300px, 1fr)); gap:12px;">
+    {% for p in people %}
+      <div class="card" style="margin:0; display:flex; flex-direction:column; min-height:500px;">
+        <h2 style="margin:0 0 6px 0;">{{ p.name }}</h2>
+        <div class="muted">{{ p.count }} foto's</div>
+
+        {% if p.preview %}
+          <div style="margin-top:10px; height:320px; width:100%; background:#f6f6f6; border-radius:12px;">
+            <a href="{{ url_for('known_person_page', person=p.name) }}" title="Bekijk alle foto's van {{ p.name }}" style="display:block; height:100%; width:100%;">
+              <img alt="Preview van {{ p.name }}"
+                   src="{{ url_for('known_person_file', person=p.name, filename=p.preview) }}"
+                   style="width:100%; height:100%; object-fit:contain;">
+            </a>
+          </div>
+        {% else %}
+          <div style="margin-top:10px; height:320px; width:100%; display:flex; align-items:center; justify-content:center; border:1px dashed #bbb; border-radius:12px;">
+            <p class="muted" style="margin:0; text-align:center;">Nog geen foto's in <span class="mono">known/{{ p.name }}/</span>.</p>
+          </div>
+        {% endif %}
+
+        <div style="margin-top:10px;">
+          <a href="{{ url_for('known_person_page', person=p.name) }}">Bekijk alle foto's</a>
+        </div>
+
+        <form action="{{ url_for('known_delete') }}" method="post" style="margin-top:auto; padding-top:8px;" onsubmit="return confirm('Ben je zeker dat je persoon {{ p.name }} wil verwijderen?');">
+          <input type="hidden" name="person" value="{{ p.name }}">
+          <button class="btn btn-danger" type="submit">Verwijder persoon</button>
+        </form>
+      </div>
+    {% endfor %}
+  </div>
+{% endblock %}

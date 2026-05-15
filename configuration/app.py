@@ -28,6 +28,7 @@ if FACEASSIST_DIR not in sys.path:
     sys.path.insert(0, FACEASSIST_DIR)
 
 from scripts.camera_stream import generate_camera_frames
+from scripts.faces import list_known_people_with_photos
 
 
 app = Flask(__name__)
@@ -264,15 +265,23 @@ def aligncamera_feed():
         mimetype="multipart/x-mixed-replace; boundary=frame",
     )
 
-
-
-
 @app.route("/camera/feed")
 def camera_feed():
     return app.response_class(
         generate_camera_frames(),
         mimetype="multipart/x-mixed-replace; boundary=frame",
     )
+
+
+@app.route("/faces")
+def unknown_page():
+    return render_template(
+        "faces.html",
+        people=list_known_people_with_photos(),
+        msg=request.args.get("msg", ""),
+        level=request.args.get("level", "info"),
+    )
+
 
 @app.route("/service/start", methods=["POST"])
 def start_service():
