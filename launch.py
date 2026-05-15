@@ -791,7 +791,7 @@ def main():
     ap.add_argument(
         "--qr_countdown",
         type=int,
-        default=10,
+        default=5,
         help="Verouderd: QR-registratie wacht nu op een groot genoeg gezicht in plaats van af te tellen.",
     )
     ap.add_argument(
