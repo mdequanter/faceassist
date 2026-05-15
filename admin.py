@@ -115,6 +115,7 @@ def detection_enabled():
         if not isinstance(data, dict):
             return True
         return _coerce_bool(
+            print (data)
             data.get("detection_enabled", data.get("enabled", True)),
             True,
         )
