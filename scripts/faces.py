@@ -1,10 +1,17 @@
 import os
 
+def iter_image_files(dir_path):
+    if not os.path.isdir(dir_path):
+        return
+    for fn in os.listdir(dir_path):
+        if fn.lower().endswith(('.jpg', '.jpeg', '.png', '.bmp', '.tiff')):
+            yield os.path.join(dir_path, fn)
+
 def list_known_people_with_photos(known_dir: str):
     items = []
     for person in list_known_people(known_dir):
         person_dir = os.path.join(known_dir, person)
-        files = iter_image_files(person_dir) if os.path.isdir(person_dir) else []
+        files = list(iter_image_files(person_dir)) if os.path.isdir(person_dir) else []
         items.append({
             "name": person,
             "count": len(files),
