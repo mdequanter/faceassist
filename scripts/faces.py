@@ -1,3 +1,5 @@
+import os
+
 def list_known_people_with_photos():
     known_dir = os.path.join(BASE_DIR, "known")
     items = []
