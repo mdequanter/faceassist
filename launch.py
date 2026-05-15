@@ -522,7 +522,7 @@ def piper_say(
         p2.kill()
 
 
-def tts_worker_loop(tts_queue: mp.Queue, stop_event: mp.Event, args, done_queue: mp.Queue = None):
+def tts_worker_loop(tts_queue, stop_event, args, done_queue=None, voice_volume_value=None):
     signal.signal(signal.SIGINT, signal.SIG_IGN)
 
     try:
@@ -569,13 +569,13 @@ def tts_worker_loop(tts_queue: mp.Queue, stop_event: mp.Event, args, done_queue:
 
 
         try:
-            print (args.voice_volume)
+            volume = voice_volume_value.value if voice_volume_value is not None else args.voice_volume
             piper_say(
                 text,
                 model_path=model_path,
                 sample_rate=sample_rate,
                 length_scale=args.piper_length_scale,
-                volume=args.voice_volume,
+                volume=volume,
             )
         except Exception:
             pass
@@ -863,6 +863,7 @@ def main():
     tts_queue = None
     tts_done_queue = None
     tts_proc = None
+    voice_volume_value = mp.Value("i", args.voice_volume)
 
     speak_enabled = (not args.no_tts) and str2bool(args.speak)
 
@@ -872,7 +873,7 @@ def main():
 
         tts_proc = mp.Process(
             target=tts_worker_loop,
-            args=(tts_queue, stop_event, args, tts_done_queue),
+            args=(tts_queue, stop_event, args, tts_done_queue, voice_volume_value),
             daemon=True,
         )
         tts_proc.start()
@@ -1000,7 +1001,9 @@ def main():
                 current_settings = load_settings_json(settings_path)
                 if "voice_volume" in current_settings:
                     try:
-                        args.voice_volume = max(0, min(100, int(current_settings["voice_volume"])))
+                        new_volume = max(0, min(100, int(current_settings["voice_volume"])))
+                        args.voice_volume = new_volume
+                        voice_volume_value.value = new_volume
                         print(f"[INFO] Settings herladen: volume={args.voice_volume}", flush=True)
                     except Exception:
                         pass
