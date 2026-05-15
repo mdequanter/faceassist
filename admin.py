@@ -1,4 +1,4 @@
-from flask import Flask, redirect, render_template, request, url_for
+from flask import Flask, redirect, render_template, request, url_for, send_from_directory
 import json
 import os
 import shutil
@@ -280,6 +280,53 @@ def faces_page():
         msg=request.args.get("msg", ""),
         level=request.args.get("level", "info"),
     )
+
+
+@app.route("/known/<person>")
+def known_person_page(person):
+    person_dir = os.path.join(APP_DIR, "known", person)
+    if not os.path.isdir(person_dir):
+        return redirect(url_for("faces_page", msg=f"Persoon '{person}' niet gevonden.", level="error"))
+    
+    files = []
+    if os.path.exists(person_dir):
+        for fn in os.listdir(person_dir):
+            if fn.lower().endswith(('.jpg', '.jpeg', '.png', '.bmp', '.tiff')):
+                files.append(fn)
+    files.sort()
+    
+    return render_template(
+        "known_person.html",
+        person=person,
+        files=files,
+        msg=request.args.get("msg", ""),
+        level=request.args.get("level", "info"),
+    )
+
+
+@app.route("/known/<person>/<filename>")
+def known_person_file(person, filename):
+    person_dir = os.path.join(APP_DIR, "known", person)
+    return send_from_directory(person_dir, filename)
+
+
+@app.route("/known/delete", methods=["POST"])
+def known_delete():
+    person = request.form.get("person")
+    if not person:
+        return redirect(url_for("faces_page", msg="Geen persoon opgegeven.", level="error"))
+    
+    person_dir = os.path.join(APP_DIR, "known", person)
+    npz_file = os.path.join(APP_DIR, "known", f"{person}.npz")
+    
+    try:
+        if os.path.exists(person_dir):
+            shutil.rmtree(person_dir)
+        if os.path.exists(npz_file):
+            os.remove(npz_file)
+        return redirect(url_for("faces_page", msg=f"Persoon '{person}' verwijderd.", level="success"))
+    except Exception as e:
+        return redirect(url_for("faces_page", msg=f"Fout bij verwijderen: {e}", level="error"))
 
 
 @app.route("/service/start", methods=["POST"])

@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% set title = "Bekende persoon: " + person %}
+
+{% block content %}
+  <h1>Bekende persoon: {{ person }}</h1>
+
+  <p><a href="{{ url_for('faces_page') }}">← Terug naar overzicht</a></p>
+
+  <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(200px, 1fr)); gap:12px;">
+    {% for f in files %}
+      <div class="card" style="margin:0;">
+        <img alt="{{ f }}" src="{{ url_for('known_person_file', person=person, filename=f) }}" style="width:100%; height:auto;">
+        <div style="padding:8px;">
+          <small class="mono">{{ f }}</small>
+        </div>
+      </div>
+    {% endfor %}
+  </div>
+
+  {% if not files %}
+    <p class="muted">Geen foto's gevonden.</p>
+  {% endif %}
+{% endblock %}

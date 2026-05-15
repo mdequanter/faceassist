@@ -15,7 +15,7 @@ def list_known_people_with_photos(known_dir: str):
         items.append({
             "name": person,
             "count": len(files),
-            "preview": files[0] if files else None,
+            "preview": os.path.basename(files[0]) if files else None,
         })
     return items
 # ---- Helpers: bekende personen uit known/*.npz ----
