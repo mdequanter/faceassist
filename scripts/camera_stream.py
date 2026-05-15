@@ -190,24 +190,23 @@ def generate_camera_frames(
                     elif face_size > max_face_size:
                         labels.append("too close")
 
-                    if in_range:
-                        aligned = recognizer.alignCrop(frame, face)
-                        feat = recognizer.feature(aligned).astype(np.float32)
-                        best_name, best_score, second_score = best_match(recognizer, feat, known)
+                    aligned = recognizer.alignCrop(frame, face)
+                    feat = recognizer.feature(aligned).astype(np.float32)
+                    best_name, best_score, second_score = best_match(recognizer, feat, known)
 
-                        threshold = 0.5
-                        margin = 0.1
-                        confident = (
-                            best_name is not None
-                            and best_score >= threshold
-                            and (best_score - second_score) >= margin
-                        )
+                    threshold = 0.5
+                    margin = 0.1
+                    confident = (
+                        best_name is not None
+                        and best_score >= threshold
+                        and (best_score - second_score) >= margin
+                    )
 
-                        if confident:
-                            labels.insert(0, best_name)
+                    if confident:
+                        labels.insert(0, best_name)
 
                     if smartvision:
-                        if in_range and confident:
+                        if confident:
                             font = cv2.FONT_HERSHEY_SIMPLEX
                             font_scale = 1.2
                             thickness = 3
