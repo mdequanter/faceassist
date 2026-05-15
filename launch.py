@@ -26,6 +26,7 @@ import queue as pyqueue
 import sys
 import json
 import re
+import csv
 from datetime import datetime
 
 YUNET_URL = "https://github.com/opencv/opencv_zoo/raw/main/models/face_detection_yunet/face_detection_yunet_2023mar.onnx"
@@ -38,6 +39,7 @@ DEFAULT_DETECTION_CONTROL_PATH = os.environ.get(
     "FACEASSIST_DETECTION_CONTROL",
     os.path.join(BASE_DIR, "detection_control.json"),
 )
+DETECTED_FACES_LOG_PATH = os.path.join(BASE_DIR, "logs", "detectedFaces.csv")
 
 
 # -----------------------------
@@ -191,6 +193,20 @@ def load_settings_json(settings_path: str):
         return data if isinstance(data, dict) else {}
     except Exception:
         return {}
+
+
+def log_detected_face(name: str, face_size: int, log_path: str = DETECTED_FACES_LOG_PATH) -> None:
+    try:
+        os.makedirs(os.path.dirname(log_path), exist_ok=True)
+        needs_header = not os.path.isfile(log_path) or os.path.getsize(log_path) == 0
+
+        with open(log_path, "a", encoding="utf-8", newline="") as f:
+            writer = csv.writer(f)
+            if needs_header:
+                writer.writerow(["time", "Name", "size"])
+            writer.writerow([datetime.now().isoformat(timespec="seconds"), name, int(face_size)])
+    except Exception as exc:
+        print(f"[WARNING] Failed to write detected-face log: {exc}", flush=True)
 
 
 def open_camera_linux(cam_index: int, width: int, height: int, fps: int):
@@ -1431,6 +1447,7 @@ def main():
                     unknown_last_photo_at = 0.0
 
                     os.makedirs(unknown_dir, exist_ok=True)
+                    log_detected_face("Unknown", min(fw, fh))
 
                     print(f"[INFO] Unknown person detected -> directory: {unknown_dir}", flush=True)
 
@@ -1493,6 +1510,7 @@ def main():
 
             last_announced_at[present_name] = now
             direction = face_direction_en(x, fw, w)
+            log_detected_face(present_name, min(fw, fh))
 
             print(
                 f"[INFO] ENTERED: {present_name} {direction} "
