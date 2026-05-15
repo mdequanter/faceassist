@@ -200,6 +200,14 @@ def log_detected_face(name: str, face_size: int, log_path: str = DETECTED_FACES_
         os.makedirs(os.path.dirname(log_path), exist_ok=True)
         needs_header = not os.path.isfile(log_path) or os.path.getsize(log_path) == 0
 
+        if not needs_header:
+            with open(log_path, "rb+") as f:
+                f.seek(0, os.SEEK_END)
+                if f.tell() > 0:
+                    f.seek(-1, os.SEEK_END)
+                    if f.read(1) not in (b"\n", b"\r"):
+                        f.write(b"\n")
+
         with open(log_path, "a", encoding="utf-8", newline="") as f:
             writer = csv.writer(f)
             if needs_header:
