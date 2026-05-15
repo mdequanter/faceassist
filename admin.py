@@ -426,6 +426,7 @@ def register_page():
     return render_template(
         "register.html",
         title="FaceAssist QR Registration",
+        register_url=url_for("register_page", _external=True),
     )
 
 

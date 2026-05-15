@@ -121,7 +121,8 @@
       display: flex;
       justify-content: center;
     }
-    #qrCanvas {
+    #qrCanvas,
+    #pageQrCanvas {
       width: 100%;
       max-width: min(390px, calc(100vw - 56px));
       height: auto;
@@ -149,7 +150,8 @@
         gap: 14px;
       }
       h1 { font-size: 24px; }
-      #qrCanvas {
+      #qrCanvas,
+      #pageQrCanvas {
         max-width: calc(100vw - 42px);
       }
     }
@@ -159,6 +161,17 @@
 <main>
   <h1>FaceAssist QR Registration</h1>
   <p class="muted">Create a QR code for local face registration on the FaceAssist system.</p>
+
+  <section class="panel qr-result is-visible">
+    <div class="qr-frame">
+      <canvas id="pageQrCanvas" width="390" height="390" aria-label="Registration page QR code"></canvas>
+    </div>
+    <div>
+      <h2>Open this registration page</h2>
+      <p>Scan this QR code with a phone to open the registration page.</p>
+      <p><strong>URL in QR:</strong> <code id="pageUrlLabel">{{ register_url }}</code></p>
+    </div>
+  </section>
 
   <section id="qrResult" class="panel qr-result">
     <div class="qr-frame">
@@ -212,10 +225,6 @@
     </form>
   </section>
 
-  <section id="operatorNote" class="panel">
-    <h2>Operator note</h2>
-    <p class="muted">This is a technical consent screen, not legal advice. The FaceAssist operator remains responsible for privacy notices, lawful basis or consent records, retention, access control, deletion requests, and local legal requirements.</p>
-  </section>
 </main>
 
 <script>
@@ -714,9 +723,20 @@
   const registrationPanel = document.getElementById("registrationPanel");
   const operatorNote = document.getElementById("operatorNote");
   const canvas = document.getElementById("qrCanvas");
+  const pageCanvas = document.getElementById("pageQrCanvas");
   const payloadLabel = document.getElementById("payloadLabel");
   const storageLabel = document.getElementById("storageLabel");
   const downloadLink = document.getElementById("downloadLink");
+  const registrationUrl = {{ register_url|tojson }};
+
+  try {
+    drawQr(pageCanvas, createQrMatrix(registrationUrl));
+  } catch (error) {
+    const pageUrlLabel = document.getElementById("pageUrlLabel");
+    if (pageUrlLabel) {
+      pageUrlLabel.textContent = registrationUrl;
+    }
+  }
 
   function setStatus(message, type = "") {
     status.textContent = message;
@@ -749,7 +769,9 @@
       downloadLink.download = `faceassist-${storageName}-qr.png`;
       result.classList.add("is-visible");
       registrationPanel.classList.add("is-hidden");
-      operatorNote.classList.add("is-hidden");
+      if (operatorNote) {
+        operatorNote.classList.add("is-hidden");
+      }
       setStatus("QR code created locally in this browser. The form was not submitted to the webserver.", "ok");
       result.scrollIntoView({behavior: "smooth", block: "start"});
     } catch (error) {
