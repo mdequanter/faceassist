@@ -91,6 +91,20 @@
       </section>
 
       <section class="panel">
+        <h2>Detection Size</h2>
+        <form method="post" action="{{ url_for('set_detection_size') }}">
+          <label class="field-label" for="detection_size">Minimum face size in pixels</label>
+          <div class="volume-row">
+            <input id="detection_size_range" type="range" min="1" max="1000" step="1" value="{{ settings.detection_size }}">
+            <input id="detection_size" name="detection_size" type="number" min="1" max="1000" step="1" value="{{ settings.detection_size }}">
+          </div>
+          <div class="actions">
+            <button class="btn btn-primary" type="submit">Save detection size</button>
+          </div>
+        </form>
+      </section>
+
+      <section class="panel">
         <h2>face assistant control</h2>
         <form method="post" action="{{ url_for('reboot_system') }}">
           <button class="btn btn-danger" type="submit" onclick="return confirm('Reboot the Face Assistant now?');">Reboot Face Assistant</button>
@@ -108,22 +122,36 @@
     (function () {
       const slider = document.getElementById("voice_volume_range");
       const number = document.getElementById("voice_volume");
-      if (!slider || !number) return;
+      const sizeSlider = document.getElementById("detection_size_range");
+      const sizeNumber = document.getElementById("detection_size");
 
-      function clamp(value) {
+      function clamp(value, min, max, fallback) {
         const parsed = parseInt(value, 10);
-        if (Number.isNaN(parsed)) return 100;
-        return Math.max(0, Math.min(100, parsed));
+        if (Number.isNaN(parsed)) return fallback;
+        return Math.max(min, Math.min(max, parsed));
       }
 
-      slider.addEventListener("input", function () {
-        number.value = slider.value;
-      });
+      if (slider && number) {
+        slider.addEventListener("input", function () {
+          number.value = slider.value;
+        });
 
-      number.addEventListener("input", function () {
-        const value = clamp(number.value);
-        slider.value = String(value);
-      });
+        number.addEventListener("input", function () {
+          const value = clamp(number.value, 0, 100, 100);
+          slider.value = String(value);
+        });
+      }
+
+      if (sizeSlider && sizeNumber) {
+        sizeSlider.addEventListener("input", function () {
+          sizeNumber.value = sizeSlider.value;
+        });
+
+        sizeNumber.addEventListener("input", function () {
+          const value = clamp(sizeNumber.value, 1, 1000, 80);
+          sizeSlider.value = String(value);
+        });
+      }
 
     })();
   </script>

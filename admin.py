@@ -36,13 +36,26 @@ def _coerce_voice_volume(value, default_value=100):
     return max(0, min(100, volume))
 
 
+def _coerce_detection_size(value, default_value=80):
+    try:
+        size = int(value)
+    except Exception:
+        size = int(default_value)
+    return max(1, min(1000, size))
+
+
 def _default_voice_volume():
     return _coerce_voice_volume(os.environ.get("VOICE_VOLUME", "100"), 100)
+
+
+def _default_detection_size():
+    return _coerce_detection_size(os.environ.get("DETECTION_SIZE", "80"), 80)
 
 
 def _default_settings():
     return {
         "voice_volume": _default_voice_volume(),
+        "detection_size": _default_detection_size(),
     }
 
 
@@ -82,7 +95,12 @@ def load_settings():
         settings.get("voice_volume", _default_voice_volume()),
         _default_voice_volume(),
     )
+    settings["detection_size"] = _coerce_detection_size(
+        settings.get("detection_size", _default_detection_size()),
+        _default_detection_size(),
+    )
     merged["voice_volume"] = settings["voice_volume"]
+    merged["detection_size"] = settings["detection_size"]
     return merged
 
 
@@ -99,6 +117,21 @@ def save_voice_volume(volume):
         f.write("\n")
     os.replace(tmp_path, SETTINGS_PATH)
     return settings["voice_volume"]
+
+
+def save_detection_size(size):
+    settings = load_settings()
+    settings["detection_size"] = _coerce_detection_size(
+        size,
+        settings.get("detection_size", _default_detection_size()),
+    )
+
+    tmp_path = f"{SETTINGS_PATH}.tmp"
+    with open(tmp_path, "w", encoding="utf-8") as f:
+        json.dump(settings, f, ensure_ascii=False, indent=2)
+        f.write("\n")
+    os.replace(tmp_path, SETTINGS_PATH)
+    return settings["detection_size"]
 
 
 def detection_enabled():
@@ -393,6 +426,15 @@ def set_volume():
     except Exception as exc:
         return _redirect_with(f"Volume save failed: {exc}", "error")
     return _redirect_with(f"Voice volume saved at {volume}.", "ok")
+
+
+@app.route("/detection-size", methods=["POST"])
+def set_detection_size():
+    try:
+        size = save_detection_size(request.form.get("detection_size"))
+    except Exception as exc:
+        return _redirect_with(f"Detection size save failed: {exc}", "error")
+    return _redirect_with(f"Detection size saved at {size}px.", "ok")
 
 
 @app.route("/reboot", methods=["POST"])

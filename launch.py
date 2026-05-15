@@ -789,10 +789,16 @@ def main():
         help="Tekst die voor de QR-inhoud wordt uitgesproken.",
     )
     ap.add_argument(
+        "--detection_size",
+        type=int,
+        default=settings.get("detection_size", 80),
+        help="Minimale breedte/hoogte in pixels voor QR-registratie.",
+    )
+    ap.add_argument(
         "--qr_min_face",
         type=int,
-        default=80,
-        help="Minimale breedte/hoogte in pixels voor het gezicht voordat QR-foto's worden genomen.",
+        default=None,
+        help="Alias voor --detection_size.",
     )
     ap.add_argument(
         "--qr_photo_count",
@@ -845,7 +851,10 @@ def main():
     args.voice_volume = max(0, min(100, int(args.voice_volume)))
     args.qr_every = max(1, int(args.qr_every))
     args.qr_max_chars = max(0, int(args.qr_max_chars))
-    args.qr_min_face = max(args.min_face, int(args.qr_min_face))
+    args.detection_size = max(1, min(1000, int(args.detection_size)))
+    if args.qr_min_face is not None:
+        args.detection_size = max(1, min(1000, int(args.qr_min_face)))
+    args.qr_min_face = max(args.min_face, args.detection_size)
     args.qr_photo_count = max(1, int(args.qr_photo_count))
     args.qr_capture_interval = max(0.0, float(args.qr_capture_interval))
     args.control_poll_interval = max(0.1, float(args.control_poll_interval))
@@ -1005,6 +1014,17 @@ def main():
                         args.voice_volume = new_volume
                         voice_volume_value.value = new_volume
                         print(f"[INFO] Settings herladen: volume={args.voice_volume}", flush=True)
+                    except Exception:
+                        pass
+                if "detection_size" in current_settings:
+                    try:
+                        new_detection_size = max(1, min(1000, int(current_settings["detection_size"])))
+                        args.detection_size = new_detection_size
+                        args.qr_min_face = max(args.min_face, new_detection_size)
+                        print(
+                            f"[INFO] Settings herladen: detection_size={args.detection_size}px",
+                            flush=True,
+                        )
                     except Exception:
                         pass
 
