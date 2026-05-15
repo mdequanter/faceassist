@@ -2,6 +2,24 @@ import time
 import cv2
 import os
 import numpy as np
+import json
+
+
+def load_detection_size(settings_path: str, default_size: int = 80) -> int:
+    try:
+        with open(settings_path, "r", encoding="utf-8") as f:
+            data = json.load(f)
+        size = int(data.get("detection_size", default_size)) if isinstance(data, dict) else default_size
+    except Exception:
+        size = default_size
+
+    return max(1, min(1000, size))
+
+
+def face_size_range(target_size: int, tolerance: float = 0.20):
+    target = max(1, int(target_size))
+    delta = max(1, int(round(target * float(tolerance))))
+    return max(1, target - delta), target + delta
 
 
 def load_known(known_dir: str):
@@ -102,6 +120,7 @@ def generate_camera_frames(cam_index=0, width=640, height=480, fps=15):
 
     BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     yunet_path = os.path.join(BASE_DIR, "models", "face_detection_yunet_2023mar.onnx")
+    settings_path = os.path.join(BASE_DIR, "settings.json")
 
     try:
         h, w = height, width
@@ -131,11 +150,15 @@ def generate_camera_frames(cam_index=0, width=640, height=480, fps=15):
 
             detector.setInputSize((w, h))
             _, faces = detector.detect(frame)
+            detection_size = load_detection_size(settings_path)
+            min_face_size, max_face_size = face_size_range(detection_size)
             if faces is not None:
                 for face in faces:
                     x, y, fw, fh = face[:4].astype(int)
                     face_size = min(fw, fh)
-                    cv2.rectangle(frame, (x, y), (x + fw, y + fh), (0, 255, 0), 2)
+                    in_range = min_face_size <= face_size <= max_face_size
+                    box_color = (0, 255, 0) if in_range else (0, 0, 255)
+                    cv2.rectangle(frame, (x, y), (x + fw, y + fh), box_color, 2)
 
                     aligned = recognizer.alignCrop(frame, face)
                     feat = recognizer.feature(aligned).astype(np.float32)
@@ -150,6 +173,10 @@ def generate_camera_frames(cam_index=0, width=640, height=480, fps=15):
                     )
 
                     labels = [f"size: {face_size}px"]
+                    if face_size < min_face_size:
+                        labels.append("too far")
+                    elif face_size > max_face_size:
+                        labels.append("too close")
 
                     if confident:
                         labels.insert(0, best_name)
@@ -162,7 +189,7 @@ def generate_camera_frames(cam_index=0, width=640, height=480, fps=15):
                             (x, label_y),
                             cv2.FONT_HERSHEY_SIMPLEX,
                             0.7,
-                            (0, 255, 0),
+                            box_color,
                             2,
                         )
                         label_y -= 24
