@@ -10,7 +10,7 @@ import sys
 
 
 APP_DIR = os.path.dirname(os.path.abspath(__file__))
-FACEASSIST_DIR = os.path.abspath(os.path.join(  , ".."))
+FACEASSIST_DIR = os.path.abspath(os.path.join( APP_DIR , "faceassist" ))
 SCRIPTS_DIR = os.path.join(FACEASSIST_DIR, "scripts")
 SETTINGS_PATH = os.path.join(FACEASSIST_DIR, "settings.json")
 RECOGNITION_SCRIPT = os.path.join(FACEASSIST_DIR, "nl_launchv2.py")
