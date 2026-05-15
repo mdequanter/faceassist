@@ -6,7 +6,6 @@ import subprocess
 import threading
 import time
 import sys
-import os
 
 
 
@@ -277,7 +276,7 @@ def camera_feed():
 def unknown_page():
     return render_template(
         "faces.html",
-        people=list_known_people_with_photos(),
+        people=list_known_people_with_photos(known_dir=os.path.join(APP_DIR, "known")),
         msg=request.args.get("msg", ""),
         level=request.args.get("level", "info"),
     )
