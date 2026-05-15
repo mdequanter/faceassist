@@ -10,6 +10,8 @@ import sys
 
 
 APP_DIR = os.path.dirname(os.path.abspath(__file__))
+
+print (f"Application directory: {APP_DIR}")
 FACEASSIST_DIR = os.path.abspath(os.path.join( APP_DIR , "faceassist" ))
 SCRIPTS_DIR = os.path.join(FACEASSIST_DIR, "scripts")
 SETTINGS_PATH = os.path.join(FACEASSIST_DIR, "settings.json")
