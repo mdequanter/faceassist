@@ -447,6 +447,7 @@ def camera_page():
         detection_enabled=detection_enabled(),
     )
 
+
 @app.route("/smartvision")
 def smartvision_page():
     return render_template(
