@@ -988,6 +988,9 @@ def main():
                         flush=True,
                     )
 
+                    if speak_enabled and tts_queue is not None:
+                        tts_enqueue(tts_queue, "Detection pauzed.")
+
                     if cap is not None:
                         cap.release()
                         cap = None
@@ -1015,6 +1018,9 @@ def main():
                     "[INFO] Detectie hervat via configuration. Camera wordt opnieuw geopend.",
                     flush=True,
                 )
+
+                if speak_enabled and tts_queue is not None:
+                    tts_enqueue(tts_queue, "Detection resumed.")
 
                 cap = open_camera_linux(args.cam, args.width, args.height, args.fps)
 
