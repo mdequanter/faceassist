@@ -273,7 +273,7 @@ def camera_feed():
 
 
 @app.route("/faces")
-def unknown_page():
+def faces_page():
     return render_template(
         "faces.html",
         people=list_known_people_with_photos(known_dir=os.path.join(APP_DIR, "known")),
