@@ -854,7 +854,7 @@ def main():
     ap.add_argument(
         "--piper_model",
         type=str,
-        default="/home/jetson/faceassist/voices/nl_BE-nathalie-medium.onnx",
+        default="/home/jetson/faceassist/voices/en_US-amy-medium.onnx",
     )
     ap.add_argument("--piper_rate", type=int, default=22050)
     ap.add_argument("--piper_rate_auto", action="store_true")
