@@ -4,6 +4,74 @@ import os
 import numpy as np
 
 
+def load_known(known_dir: str):
+    known = {}
+
+    if not os.path.isdir(known_dir):
+        return known
+
+    for fn in os.listdir(known_dir):
+        if fn.lower().endswith(".npz"):
+            name = os.path.splitext(fn)[0]
+            data = np.load(os.path.join(known_dir, fn))
+            feats = data["features"].astype(np.float32)
+            known[name] = feats
+
+    return known
+
+
+def normalize_match_feature(feat):
+    if feat is None:
+        return None
+
+    arr = np.asarray(feat, dtype=np.float32)
+    if arr.size == 0:
+        return None
+
+    return arr.reshape(1, -1)
+
+
+def best_match(recognizer, feat, known: dict):
+    feat_match = normalize_match_feature(feat)
+    if feat_match is None:
+        return None, -1.0, -1.0
+
+    scores = []
+
+    for name, feats in known.items():
+        best = -1.0
+
+        for f in feats:
+            f_match = normalize_match_feature(f)
+
+            if f_match is None or f_match.shape != feat_match.shape:
+                continue
+
+            s = float(
+                recognizer.match(
+                    feat_match,
+                    f_match,
+                    cv2.FaceRecognizerSF_FR_COSINE,
+                )
+            )
+
+            if s > best:
+                best = s
+
+        if best > -1.0:
+            scores.append((name, best))
+
+    if not scores:
+        return None, -1.0, -1.0
+
+    scores.sort(key=lambda x: x[1], reverse=True)
+
+    best_name, best_score = scores[0]
+    second_score = scores[1][1] if len(scores) > 1 else -1.0
+
+    return best_name, best_score, second_score
+
+
 def open_preview_camera(cam_index=0, width=640, height=480, fps=15):
     cap = cv2.VideoCapture(cam_index, cv2.CAP_V4L2)
 
@@ -46,6 +114,12 @@ def generate_camera_frames(cam_index=0, width=640, height=480, fps=15):
             5000,  # topk
         )
 
+        sface_path = os.path.join(BASE_DIR, "models", "face_recognition_sface_2021dec.onnx")
+        recognizer = cv2.FaceRecognizerSF.create(sface_path, "")
+
+        known_dir = os.path.join(BASE_DIR, "known")
+        known = load_known(known_dir)
+
         while True:
             ok, frame = cap.read()
 
@@ -61,6 +135,21 @@ def generate_camera_frames(cam_index=0, width=640, height=480, fps=15):
                 for face in faces:
                     x, y, fw, fh = face[:4].astype(int)
                     cv2.rectangle(frame, (x, y), (x + fw, y + fh), (0, 255, 0), 2)
+
+                    aligned = recognizer.alignCrop(frame, face)
+                    feat = recognizer.feature(aligned).astype(np.float32)
+                    best_name, best_score, second_score = best_match(recognizer, feat, known)
+
+                    threshold = 0.5
+                    margin = 0.1
+                    confident = (
+                        best_name is not None
+                        and best_score >= threshold
+                        and (best_score - second_score) >= margin
+                    )
+
+                    if confident:
+                        cv2.putText(frame, best_name, (x, y-10), cv2.FONT_HERSHEY_SIMPLEX, 0.9, (0,255,0), 2)
 
             ok, buffer = cv2.imencode(".jpg", frame)
 
