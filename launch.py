@@ -555,7 +555,9 @@ def tts_worker_loop(tts_queue: mp.Queue, stop_event: mp.Event, args, done_queue:
                     pass
             continue
 
+
         try:
+            print (args.voice_volume)
             piper_say(
                 text,
                 model_path=model_path,
