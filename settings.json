@@ -1,4 +1,6 @@
 {
   "voice_volume": 6,
-  "detection_size": 80
+  "detection_size": 80,
+  "admin_password_hash": "scrypt:32768:8:1$tvdTW2ziHBJwRFoF$b54ef31412cacb0f92f509a9c31710d21f6ad1fde7c253a29fd3e2f97db314b83ff9161a7575b959c4b08dd3db87e3b2a2968f67774afc794a3b3e5b2d071088",
+  "admin_session_secret": "r3DptXHQlN0XXrmicbiseYK7f5gpw00-7BOjfM1UzzI"
 }

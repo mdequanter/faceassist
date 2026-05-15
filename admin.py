@@ -1,4 +1,4 @@
-from flask import Flask, redirect, render_template, request, url_for, send_from_directory
+from flask import Flask, redirect, render_template, request, url_for, send_from_directory, session
 import json
 import os
 import shutil
@@ -6,6 +6,8 @@ import subprocess
 import threading
 import time
 import sys
+import secrets
+from werkzeug.security import check_password_hash, generate_password_hash
 
 
 
@@ -26,6 +28,7 @@ from scripts.faces import list_known_people_with_photos
 
 
 app = Flask(__name__)
+app.secret_key = os.environ.get("FACEASSIST_SECRET_KEY", "faceassist-admin-session")
 
 
 def _coerce_voice_volume(value, default_value=100):
@@ -57,6 +60,14 @@ def _default_settings():
         "voice_volume": _default_voice_volume(),
         "detection_size": _default_detection_size(),
     }
+
+
+def _write_settings(settings):
+    tmp_path = f"{SETTINGS_PATH}.tmp"
+    with open(tmp_path, "w", encoding="utf-8") as f:
+        json.dump(settings, f, ensure_ascii=False, indent=2)
+        f.write("\n")
+    os.replace(tmp_path, SETTINGS_PATH)
 
 
 def _coerce_bool(value, default_value=False):
@@ -104,6 +115,39 @@ def load_settings():
     return merged
 
 
+def ensure_admin_password_hash():
+    settings = load_settings()
+    if settings.get("admin_password_hash"):
+        return
+
+    password = os.environ.get("FACEASSIST_ADMIN_PASSWORD", "admin")
+    settings["admin_password_hash"] = generate_password_hash(password)
+    _write_settings(settings)
+
+
+def ensure_admin_session_secret():
+    settings = load_settings()
+    session_secret = settings.get("admin_session_secret")
+    if session_secret:
+        return session_secret
+
+    session_secret = secrets.token_urlsafe(32)
+    settings["admin_session_secret"] = session_secret
+    _write_settings(settings)
+    return session_secret
+
+
+def save_admin_password(password):
+    settings = load_settings()
+    settings["admin_password_hash"] = generate_password_hash(password)
+    _write_settings(settings)
+
+
+def verify_admin_password(password):
+    password_hash = load_settings().get("admin_password_hash", "")
+    return bool(password_hash) and check_password_hash(password_hash, password or "")
+
+
 def save_voice_volume(volume):
     settings = load_settings()
     settings["voice_volume"] = _coerce_voice_volume(
@@ -111,11 +155,7 @@ def save_voice_volume(volume):
         settings.get("voice_volume", _default_voice_volume()),
     )
 
-    tmp_path = f"{SETTINGS_PATH}.tmp"
-    with open(tmp_path, "w", encoding="utf-8") as f:
-        json.dump(settings, f, ensure_ascii=False, indent=2)
-        f.write("\n")
-    os.replace(tmp_path, SETTINGS_PATH)
+    _write_settings(settings)
     return settings["voice_volume"]
 
 
@@ -126,11 +166,7 @@ def save_detection_size(size):
         settings.get("detection_size", _default_detection_size()),
     )
 
-    tmp_path = f"{SETTINGS_PATH}.tmp"
-    with open(tmp_path, "w", encoding="utf-8") as f:
-        json.dump(settings, f, ensure_ascii=False, indent=2)
-        f.write("\n")
-    os.replace(tmp_path, SETTINGS_PATH)
+    _write_settings(settings)
     return settings["detection_size"]
 
 
@@ -260,12 +296,54 @@ def _redirect_with(message, level="info"):
     return redirect(url_for("control_page", msg=message, level=level))
 
 
+@app.before_request
+def require_login():
+    if request.endpoint in ("login", "static"):
+        return None
+
+    if session.get("admin_authenticated"):
+        return None
+
+    return redirect(url_for("login", next=request.full_path))
+
+
 def _set_detection_and_redirect(enabled, message):
     try:
         save_detection_enabled(enabled)
     except Exception as exc:
         return _redirect_with(f"Detectiestatus opslaan mislukt: {exc}", "error")
     return _redirect_with(message, "ok")
+
+
+@app.route("/login", methods=["GET", "POST"])
+def login():
+    if request.method == "POST":
+        if verify_admin_password(request.form.get("password")):
+            session["admin_authenticated"] = True
+            next_url = request.form.get("next") or url_for("control_page")
+            if not next_url.startswith("/") or next_url.startswith("//"):
+                next_url = url_for("control_page")
+            return redirect(next_url)
+
+        return render_template(
+            "login.html",
+            title="Admin Login",
+            msg="Invalid password.",
+            next=request.form.get("next", ""),
+        )
+
+    return render_template(
+        "login.html",
+        title="Admin Login",
+        msg=request.args.get("msg", ""),
+        next=request.args.get("next", ""),
+    )
+
+
+@app.route("/logout", methods=["POST"])
+def logout():
+    session.clear()
+    return redirect(url_for("login", msg="Logged out."))
 
 
 @app.route("/")
@@ -437,6 +515,25 @@ def set_detection_size():
     return _redirect_with(f"Detection size saved at {size}px.", "ok")
 
 
+@app.route("/password", methods=["POST"])
+def set_password():
+    current_password = request.form.get("current_password", "")
+    new_password = request.form.get("new_password", "")
+    confirm_password = request.form.get("confirm_password", "")
+
+    if not verify_admin_password(current_password):
+        return _redirect_with("Current password is incorrect.", "error")
+
+    if len(new_password) < 8:
+        return _redirect_with("New password must be at least 8 characters.", "error")
+
+    if new_password != confirm_password:
+        return _redirect_with("New passwords do not match.", "error")
+
+    save_admin_password(new_password)
+    return _redirect_with("Admin password changed.", "ok")
+
+
 @app.route("/reboot", methods=["POST"])
 def reboot_system():
     _run_system_action_later(_system_action_commands("reboot"))
@@ -447,6 +544,10 @@ def shutdown_system():
     _run_system_action_later(_system_action_commands("poweroff"))
     return _redirect_with("Jetson shutdown requested.", "ok")
 
+
+
+ensure_admin_password_hash()
+app.secret_key = os.environ.get("FACEASSIST_SECRET_KEY", ensure_admin_session_secret())
 
 
 if __name__ == "__main__":

@@ -269,6 +269,16 @@
       font-weight: 700;
     }
 
+    input[type="password"] {
+      width: 100%;
+      min-height: 44px;
+      border: 1px solid #aeb7c2;
+      border-radius: 8px;
+      padding: 8px 10px;
+      font-size: 17px;
+      font-weight: 700;
+    }
+
     select {
       min-height: 44px;
       border: 1px solid #aeb7c2;
@@ -314,9 +324,14 @@
     <div class="nav">
       <div class="brand">Face Assistant Configuration</div>
       <nav class="menu" aria-label="Configuration menu">
-        <a href="{{ url_for('control_page') }}">Control</a>
-        <a href="{{ url_for('camera_page') }}">Camera</a>
-        <a href="{{ url_for('faces_page') }}">Faces</a>
+        {% if session.admin_authenticated %}
+          <a href="{{ url_for('control_page') }}">Control</a>
+          <a href="{{ url_for('camera_page') }}">Camera</a>
+          <a href="{{ url_for('faces_page') }}">Faces</a>
+          <form method="post" action="{{ url_for('logout') }}" style="margin:0;">
+            <button class="btn" type="submit">Logout</button>
+          </form>
+        {% endif %}
       </nav>
     </div>
   </header>

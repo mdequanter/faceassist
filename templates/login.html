@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+
+{% block content %}
+  <h1>Admin Login</h1>
+
+  {% if msg %}
+    <div class="notice error">{{ msg }}</div>
+  {% endif %}
+
+  <section class="panel" style="margin-top:18px; max-width: 460px;">
+    <form method="post" action="{{ url_for('login') }}">
+      <input type="hidden" name="next" value="{{ next }}">
+      <label class="field-label" for="password">Password</label>
+      <input id="password" name="password" type="password" autocomplete="current-password" required>
+      <div class="actions">
+        <button class="btn btn-primary" type="submit">Login</button>
+      </div>
+    </form>
+  </section>
+{% endblock %}
