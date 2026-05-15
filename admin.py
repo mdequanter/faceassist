@@ -294,6 +294,26 @@ def known_person_file(person, filename):
     return send_from_directory(person_dir, filename)
 
 
+@app.route("/known/<person>/photo/delete", methods=["POST"])
+def known_photo_delete(person):
+    filename = request.form.get("filename")
+    if not filename:
+        return redirect(url_for("known_person_page", person=person, msg="Geen foto opgegeven.", level="error"))
+
+    safe_filename = os.path.basename(filename)
+    person_dir = os.path.join(APP_DIR, "known", person)
+    photo_path = os.path.join(person_dir, safe_filename)
+
+    if not os.path.isfile(photo_path):
+        return redirect(url_for("known_person_page", person=person, msg="Foto niet gevonden.", level="error"))
+
+    try:
+        os.remove(photo_path)
+        return redirect(url_for("known_person_page", person=person, msg=f"Foto '{safe_filename}' verwijderd.", level="success"))
+    except Exception as e:
+        return redirect(url_for("known_person_page", person=person, msg=f"Fout bij verwijderen van foto: {e}", level="error"))
+
+
 @app.route("/known/delete", methods=["POST"])
 def known_delete():
     person = request.form.get("person")
