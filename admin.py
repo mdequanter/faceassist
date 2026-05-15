@@ -373,7 +373,7 @@ def _redirect_with(message, level="info"):
 
 @app.before_request
 def require_login():
-    if request.endpoint in ("login", "static"):
+    if request.endpoint in ("login", "register_page", "static"):
         return None
 
     if session.get("admin_authenticated"):
@@ -419,6 +419,14 @@ def login():
 def logout():
     session.clear()
     return redirect(url_for("login", msg="Logged out."))
+
+
+@app.route("/register")
+def register_page():
+    return render_template(
+        "register.html",
+        title="FaceAssist QR Registration",
+    )
 
 
 @app.route("/")
