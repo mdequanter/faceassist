@@ -181,6 +181,18 @@ def decode_qr_codes(qr_detector, frame):
     return unique
 
 
+def load_settings_json(settings_path: str):
+    if not os.path.isfile(settings_path):
+        return {}
+
+    try:
+        with open(settings_path, "r", encoding="utf-8") as f:
+            data = json.load(f)
+        return data if isinstance(data, dict) else {}
+    except Exception:
+        return {}
+
+
 def open_camera_linux(cam_index: int, width: int, height: int, fps: int):
     dev = f"/dev/video{cam_index}"
 
@@ -666,10 +678,7 @@ def save_snapshot(frame, out_dir: str, tag: str) -> str:
 
 def main():
     settings_path = os.path.join(BASE_DIR, "settings.json")
-    settings = {}
-    if os.path.exists(settings_path):
-        with open(settings_path, 'r') as f:
-            settings = json.load(f)
+    settings = load_settings_json(settings_path)
 
     ap = argparse.ArgumentParser()
 
@@ -973,14 +982,29 @@ def main():
         default_enabled=True,
     )
 
+    settings_check_interval = args.control_poll_interval
+    last_settings_check = time.time()
+
     detection_paused = False
 
     print(f"[INFO] Detectie-controlbestand: {detection_control.path}", flush=True)
     print(f"[INFO] Detectie-control poll interval: {args.control_poll_interval:.1f}s", flush=True)
+    print(f"[INFO] Settings reload interval: {settings_check_interval:.1f}s", flush=True)
     print("[INFO] Headless actief. Ctrl+C om te stoppen.", flush=True)
 
     try:
         while True:
+            now = time.time()
+            if now - last_settings_check >= settings_check_interval:
+                last_settings_check = now
+                current_settings = load_settings_json(settings_path)
+                if "voice_volume" in current_settings:
+                    try:
+                        args.voice_volume = max(0, min(100, int(current_settings["voice_volume"])))
+                        print(f"[INFO] Settings herladen: volume={args.voice_volume}", flush=True)
+                    except Exception:
+                        pass
+
             if not detection_control.enabled():
                 if not detection_paused:
                     print(
