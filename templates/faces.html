@@ -22,10 +22,10 @@
             <img
               src="{{ url_for('known_person_file', person=p.name, filename=p.preview) }}"
               alt="Preview van {{ p.name }}"
-              style="width:100%; height:320px; object-fit:cover; display:block;">
+              style="width:100%; height: 160px; object-fit:cover; display:block;">
           </a>
         {% else %}
-          <div style="min-height:320px; display:flex; align-items:center; justify-content:center; text-align:center; border:1px dashed #bbb; border-radius:12px; padding:18px; background:#fff;">
+          <div style="min-height:160px; display:flex; align-items:center; justify-content:center; text-align:center; border:1px dashed #bbb; border-radius:12px; padding:18px; background:#fff;">
             <p class="muted" style="margin:0;">No photos found in <code>known/{{ p.name }}/</code>.</p>
           </div>
         {% endif %}
