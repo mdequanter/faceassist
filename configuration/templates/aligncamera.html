@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h1>Camera Preview</h1>
+
+{% if detection_enabled %}
+  <div class="notice warn">
+    Detectie staat nog aan. Zet detectie eerst uit zodat de camera vrijgegeven wordt.
+  </div>
+
+  <form method="post" action="{{ url_for('disable_detection') }}" class="actions">
+    <button class="btn btn-danger" type="submit">Detectie pauzeren</button>
+  </form>
+{% else %}
+  <div class="notice ok">
+    Detectie staat uit. Camera-preview is actief.
+  </div>
+
+  <div class="panel" style="margin-top: 16px;">
+    <img
+      src="{{ url_for('aligncamera_feed') }}"
+      alt="Camera preview"
+      style="width: 100%; max-width: 720px; border-radius: 8px; border: 1px solid var(--line);"
+    >
+  </div>
+
+  <form method="post" action="{{ url_for('enable_detection') }}" class="actions">
+    <button class="btn btn-primary" type="submit">Detectie opnieuw starten</button>
+  </form>
+{% endif %}
+{% endblock %}

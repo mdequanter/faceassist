@@ -1,0 +1,130 @@
+{% extends "base.html" %}
+
+{% block content %}
+  <h1>Configuration</h1>
+
+  {% if msg %}
+    <div class="notice {{ level }}">{{ msg }}</div>
+  {% endif %}
+
+  <section id="nl-launch" class="panel" style="margin-top:18px;">
+    <h2>Detection</h2>
+    <div class="status-grid">
+      <div>
+        <span class="field-label">Detection</span>
+        <span class="field-value">
+          {% if detection_enabled %}
+            <span class="pill ok">On</span>
+          {% else %}
+            <span class="pill warn">pauzed</span>
+          {% endif %}
+        </span>
+      </div>
+    </div>
+
+    <div class="actions">
+      {% if detection_enabled %}
+        <form method="post" action="{{ url_for('disable_detection') }}">
+          <button class="btn btn-danger" type="submit">Pauze detection</button>
+        </form>
+      {% else %}
+        <form method="post" action="{{ url_for('enable_detection') }}">
+          <button class="btn btn-primary" type="submit">Enable detection</button>
+        </form>
+      {% endif %}
+      <a class="btn" href="{{ url_for('control_page') }}#nl-launch">Refresh</a>
+    </div>
+  </section>
+
+  <div class="layout">
+    <section class="panel">
+      <h2>Service</h2>
+      <div class="status-grid">
+        <div>
+          <span class="field-label">Unit</span>
+          <span class="field-value"><code>{{ status.service_name }}</code></span>
+        </div>
+        <div>
+          <span class="field-label">State</span>
+          {% set active_class = "ok" if status.active_state == "active" else ("warn" if status.active_state in ["inactive", "deactivating"] else "error") %}
+          <span class="field-value"><span class="pill {{ active_class }}">{{ status.active_state }}</span></span>
+        </div>
+        <div>
+          <span class="field-label">Substate</span>
+          <span class="field-value">{{ status.sub_state }}</span>
+        </div>
+        <div>
+          <span class="field-label">Enabled</span>
+          <span class="field-value">{{ status.unit_file_state }}</span>
+        </div>
+        <div>
+          <span class="field-label">PID</span>
+          <span class="field-value">{{ status.main_pid }}</span>
+        </div>
+        <div>
+          <span class="field-label">Loaded</span>
+          <span class="field-value">{{ status.load_state }}</span>
+        </div>
+      </div>
+
+      {% if status.error %}
+        <div class="notice error">Service status unavailable: {{ status.error }}</div>
+      {% endif %}
+
+      <div class="actions">
+        <a class="btn" href="{{ url_for('control_page') }}">Refresh status</a>
+      </div>
+    </section>
+
+    <div class="stack">
+      <section class="panel">
+        <h2>Voice Volume</h2>
+        <form method="post" action="{{ url_for('set_volume') }}">
+          <label class="field-label" for="voice_volume">Volume 0-100</label>
+          <div class="volume-row">
+            <input id="voice_volume_range" type="range" min="0" max="100" step="1" value="{{ settings.voice_volume }}">
+            <input id="voice_volume" name="voice_volume" type="number" min="0" max="100" step="1" value="{{ settings.voice_volume }}">
+          </div>
+          <div class="actions">
+            <button class="btn btn-primary" type="submit">Save volume</button>
+          </div>
+        </form>
+      </section>
+
+      <section class="panel">
+        <h2>face assistant control</h2>
+        <form method="post" action="{{ url_for('reboot_system') }}">
+          <button class="btn btn-danger" type="submit" onclick="return confirm('Reboot the Face Assistant now?');">Reboot Face Assistant</button>
+        </form>
+      <form method="post" action="{{ url_for('shutdown_system') }}" style="margin:0;">
+        <button class="btn btn-danger" type="submit" onclick="return confirm('Are you sure you want to shutdown?');">Shutdown</button>
+      </form>
+
+      </section>
+    </div>
+  </div>
+
+  <script>
+    (function () {
+      const slider = document.getElementById("voice_volume_range");
+      const number = document.getElementById("voice_volume");
+      if (!slider || !number) return;
+
+      function clamp(value) {
+        const parsed = parseInt(value, 10);
+        if (Number.isNaN(parsed)) return 100;
+        return Math.max(0, Math.min(100, parsed));
+      }
+
+      slider.addEventListener("input", function () {
+        number.value = slider.value;
+      });
+
+      number.addEventListener("input", function () {
+        const value = clamp(number.value);
+        slider.value = String(value);
+      });
+
+    })();
+  </script>
+{% endblock %}

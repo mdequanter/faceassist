@@ -1,0 +1,328 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{{ title or "Face Assistant Configuration" }}</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --bg: #f7f8fa;
+      --text: #15171a;
+      --muted: #5b6370;
+      --line: #d8dde4;
+      --panel: #ffffff;
+      --primary: #0f766e;
+      --primary-dark: #115e59;
+      --danger: #b42318;
+      --danger-dark: #912018;
+      --warn: #b45309;
+      --ok: #067647;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      line-height: 1.5;
+    }
+
+    header {
+      background: #20242a;
+      color: #fff;
+      border-bottom: 1px solid #111;
+    }
+
+    .nav {
+      max-width: 1120px;
+      margin: 0 auto;
+      padding: 14px 18px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+
+    .brand {
+      font-size: 20px;
+      font-weight: 700;
+    }
+
+    .menu {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .menu a {
+      color: #fff;
+      text-decoration: none;
+      font-weight: 600;
+      padding: 7px 10px;
+      border-radius: 6px;
+    }
+
+    .menu a:hover,
+    .menu a:focus {
+      background: rgba(255, 255, 255, 0.12);
+      outline: none;
+    }
+
+    main {
+      max-width: 1120px;
+      margin: 0 auto;
+      padding: 22px 18px 42px;
+    }
+
+    h1 {
+      margin: 0 0 4px;
+      font-size: clamp(28px, 4vw, 40px);
+      line-height: 1.1;
+    }
+
+    h2 {
+      margin: 0 0 14px;
+      font-size: 22px;
+    }
+
+    p {
+      margin: 0;
+    }
+
+    .muted {
+      color: var(--muted);
+    }
+
+    .layout {
+      display: grid;
+      grid-template-columns: minmax(0, 1.1fr) minmax(280px, 0.9fr);
+      gap: 16px;
+      align-items: start;
+      margin-top: 18px;
+    }
+
+    .panel {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 18px;
+    }
+
+    .stack {
+      display: grid;
+      gap: 16px;
+    }
+
+    .status-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
+    }
+
+    .field-label {
+      display: block;
+      color: var(--muted);
+      font-size: 13px;
+      font-weight: 700;
+      text-transform: uppercase;
+    }
+
+    .field-value {
+      display: block;
+      overflow-wrap: anywhere;
+      font-weight: 700;
+      margin-top: 2px;
+    }
+
+    .pill {
+      display: inline-flex;
+      min-height: 28px;
+      align-items: center;
+      border-radius: 999px;
+      padding: 3px 10px;
+      font-size: 14px;
+      font-weight: 800;
+      text-transform: uppercase;
+      background: #edf0f3;
+      color: #333a42;
+    }
+
+    .pill.ok {
+      background: #dcfae6;
+      color: var(--ok);
+    }
+
+    .pill.warn {
+      background: #fef0c7;
+      color: var(--warn);
+    }
+
+    .pill.error {
+      background: #fee4e2;
+      color: var(--danger);
+    }
+
+    .actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 14px;
+    }
+
+    .btn {
+      appearance: none;
+      border: 0;
+      border-radius: 8px;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 44px;
+      padding: 10px 15px;
+      font-size: 16px;
+      font-weight: 800;
+      text-decoration: none;
+      background: #e8ecf1;
+      color: #18202a;
+    }
+
+    .btn:hover,
+    .btn:focus {
+      filter: brightness(0.96);
+      outline: 2px solid rgba(15, 118, 110, 0.25);
+      outline-offset: 2px;
+    }
+
+    .btn-primary {
+      background: var(--primary);
+      color: #fff;
+    }
+
+    .btn-primary:hover,
+    .btn-primary:focus {
+      background: var(--primary-dark);
+    }
+
+    .btn-danger {
+      background: var(--danger);
+      color: #fff;
+    }
+
+    .btn-danger:hover,
+    .btn-danger:focus {
+      background: var(--danger-dark);
+    }
+
+    .notice {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 12px 14px;
+      margin-top: 16px;
+      background: #fff;
+      font-weight: 700;
+    }
+
+    .notice.ok {
+      border-color: #75e0a7;
+      background: #ecfdf3;
+      color: var(--ok);
+    }
+
+    .notice.error {
+      border-color: #fda29b;
+      background: #fffbfa;
+      color: var(--danger);
+    }
+
+    .notice.info {
+      border-color: #b9c4d0;
+      background: #f8fafc;
+      color: #344054;
+    }
+
+    .volume-row {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 96px;
+      gap: 12px;
+      align-items: center;
+    }
+
+    input[type="range"] {
+      width: 100%;
+      accent-color: var(--primary);
+    }
+
+    input[type="number"] {
+      width: 100%;
+      min-height: 44px;
+      border: 1px solid #aeb7c2;
+      border-radius: 8px;
+      padding: 8px 10px;
+      font-size: 17px;
+      font-weight: 700;
+    }
+
+    select {
+      min-height: 44px;
+      border: 1px solid #aeb7c2;
+      border-radius: 8px;
+      padding: 8px 10px;
+      font-size: 16px;
+      font-weight: 700;
+      background: #fff;
+      color: var(--text);
+    }
+
+    .log-box {
+      max-height: 260px;
+      overflow: auto;
+      white-space: pre-wrap;
+      margin: 14px 0 0;
+      padding: 12px;
+      border-radius: 8px;
+      background: #101820;
+      color: #edf6ff;
+    }
+
+    code {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      font-size: 0.95em;
+    }
+
+    @media (max-width: 760px) {
+      .layout,
+      .status-grid,
+      .volume-row {
+        grid-template-columns: 1fr;
+      }
+
+      .btn {
+        width: 100%;
+      }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="nav">
+      <div class="brand">Face Assistant Configuration</div>
+      <nav class="menu" aria-label="Configuration menu">
+        <a href="{{ url_for('control_page') }}">Control</a>
+        <a href="{{ url_for('camera_page') }}">Camera</a>
+        <a href="{{ url_for('aligncamera_page') }}">Align Camera</a>
+      </nav>
+    </div>
+  </header>
+
+  <main>
+    {% block content %}{% endblock %}
+  </main>
+</body>
+</html>
