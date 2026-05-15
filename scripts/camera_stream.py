@@ -1,5 +1,7 @@
 import time
 import cv2
+import os
+import numpy as np
 
 
 def open_preview_camera(cam_index=0, width=640, height=480, fps=15):
@@ -30,7 +32,20 @@ def generate_camera_frames(cam_index=0, width=640, height=480, fps=15):
         print("[FOUT] Preview camera kon niet geopend worden.", flush=True)
         return
 
+    BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    yunet_path = os.path.join(BASE_DIR, "models", "face_detection_yunet_2023mar.onnx")
+
     try:
+        h, w = height, width
+        detector = cv2.FaceDetectorYN.create(
+            yunet_path,
+            "",
+            (w, h),
+            0.9,  # score_th
+            0.3,  # nms_th
+            5000,  # topk
+        )
+
         while True:
             ok, frame = cap.read()
 
@@ -39,6 +54,13 @@ def generate_camera_frames(cam_index=0, width=640, height=480, fps=15):
                 continue
 
             frame = cv2.resize(frame, (width, height))
+
+            detector.setInputSize((w, h))
+            _, faces = detector.detect(frame)
+            if faces is not None:
+                for face in faces:
+                    x, y, fw, fh = face[:4].astype(int)
+                    cv2.rectangle(frame, (x, y), (x + fw, y + fh), (0, 255, 0), 2)
 
             ok, buffer = cv2.imencode(".jpg", frame)
 
