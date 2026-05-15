@@ -663,6 +663,12 @@ def save_snapshot(frame, out_dir: str, tag: str) -> str:
 # -----------------------------
 
 def main():
+    settings_path = os.path.join(BASE_DIR, "settings.json")
+    settings = {}
+    if os.path.exists(settings_path):
+        with open(settings_path, 'r') as f:
+            settings = json.load(f)
+
     ap = argparse.ArgumentParser()
 
     # Camera + detectie
@@ -806,7 +812,7 @@ def main():
     ap.add_argument("--piper_rate", type=int, default=22050)
     ap.add_argument("--piper_rate_auto", action="store_true")
     ap.add_argument("--piper_length_scale", type=float, default=1.0)
-    ap.add_argument("--voice_volume", type=int, default=20)
+    ap.add_argument("--voice_volume", type=int, default=settings.get("voice_volume", 20))
     ap.add_argument("--tts_queue_size", type=int, default=20)
 
     # Detectie-control
