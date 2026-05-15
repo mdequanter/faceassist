@@ -1300,23 +1300,27 @@ def main():
 
                     continue
 
-            elif fw < args.min_face:
-                if present and now - last_seen >= args.lost_timeout:
-                    print(f"[INFO] {present_name} is uit beeld.", flush=True)
+            else:
+                face_size = min(fw, fh)
+                min_face_size, max_face_size = face_size_range(args.detection_size)
 
-                    present = False
-                    present_name = None
+                if face_size < min_face_size or face_size > max_face_size:
+                    if present and now - last_seen >= args.lost_timeout:
+                        print(f"[INFO] {present_name} is uit beeld.", flush=True)
 
-                unknown_consec = 0
-                unknown_started_at = None
-                unknown_dir = "unknown"
-                unknown_photo_count = 0
-                unknown_last_photo_at = 0.0
+                        present = False
+                        present_name = None
 
-                consec_count = 0
-                candidate_name = None
+                    unknown_consec = 0
+                    unknown_started_at = None
+                    unknown_dir = "unknown"
+                    unknown_photo_count = 0
+                    unknown_last_photo_at = 0.0
 
-                continue
+                    consec_count = 0
+                    candidate_name = None
+
+                    continue
 
             richting = face_direction_nl(x, fw, w)
 
