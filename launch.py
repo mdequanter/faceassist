@@ -789,12 +789,6 @@ def main():
         help="Tekst die voor de QR-inhoud wordt uitgesproken.",
     )
     ap.add_argument(
-        "--qr_countdown",
-        type=int,
-        default=5,
-        help="Verouderd: QR-registratie wacht nu op een groot genoeg gezicht in plaats van af te tellen.",
-    )
-    ap.add_argument(
         "--qr_min_face",
         type=int,
         default=120,
@@ -851,7 +845,6 @@ def main():
     args.voice_volume = max(0, min(100, int(args.voice_volume)))
     args.qr_every = max(1, int(args.qr_every))
     args.qr_max_chars = max(0, int(args.qr_max_chars))
-    args.qr_countdown = max(0, int(args.qr_countdown))
     args.qr_min_face = max(args.min_face, int(args.qr_min_face))
     args.qr_photo_count = max(1, int(args.qr_photo_count))
     args.qr_capture_interval = max(0.0, float(args.qr_capture_interval))
