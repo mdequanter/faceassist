@@ -791,7 +791,7 @@ def main():
     ap.add_argument(
         "--qr_min_face",
         type=int,
-        default=120,
+        default=80,
         help="Minimale breedte/hoogte in pixels voor het gezicht voordat QR-foto's worden genomen.",
     )
     ap.add_argument(
