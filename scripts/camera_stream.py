@@ -134,6 +134,7 @@ def generate_camera_frames(cam_index=0, width=640, height=480, fps=15):
             if faces is not None:
                 for face in faces:
                     x, y, fw, fh = face[:4].astype(int)
+                    face_size = min(fw, fh)
                     cv2.rectangle(frame, (x, y), (x + fw, y + fh), (0, 255, 0), 2)
 
                     aligned = recognizer.alignCrop(frame, face)
@@ -148,8 +149,23 @@ def generate_camera_frames(cam_index=0, width=640, height=480, fps=15):
                         and (best_score - second_score) >= margin
                     )
 
+                    labels = [f"size: {face_size}px"]
+
                     if confident:
-                        cv2.putText(frame, best_name, (x, y-10), cv2.FONT_HERSHEY_SIMPLEX, 0.9, (0,255,0), 2)
+                        labels.insert(0, best_name)
+
+                    label_y = max(24, y - 10)
+                    for label in reversed(labels):
+                        cv2.putText(
+                            frame,
+                            label,
+                            (x, label_y),
+                            cv2.FONT_HERSHEY_SIMPLEX,
+                            0.7,
+                            (0, 255, 0),
+                            2,
+                        )
+                        label_y -= 24
 
             ok, buffer = cv2.imencode(".jpg", frame)
 
