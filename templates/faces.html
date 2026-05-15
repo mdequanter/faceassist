@@ -20,15 +20,14 @@
           </div>
         {% else %}
           <div style="margin-top:10px; height:320px; width:100%; display:flex; align-items:center; justify-content:center; border:1px dashed #bbb; border-radius:12px; padding:16px; text-align:center;">
-            <p class="muted" style="margin:0;">Nog geen foto's in <span class="mono">known/{{ p.name }}/</span>.</p>
+            <p class="muted" style="margin:0;">No footos in <span class="mono">known/{{ p.name }}/</span>.</p>
           </div>
         {% endif %}
 
         <div style="margin-top:10px; display:flex; justify-content:space-between; align-items:center; gap:8px;">
-          <a href="{{ url_for('known_person_page', person=p.name) }}">Bekijk alle foto's</a>
           <form action="{{ url_for('known_delete') }}" method="post" style="margin:0;" onsubmit="return confirm('Ben je zeker dat je persoon {{ p.name }} wil verwijderen?');">
             <input type="hidden" name="person" value="{{ p.name }}">
-            <button class="btn btn-danger" type="submit">Verwijder persoon</button>
+            <button class="btn btn-danger" type="submit">Delete person</button>
           </form>
         </div>
       </div>
