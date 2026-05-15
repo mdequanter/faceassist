@@ -10,7 +10,6 @@ import os
 
 
 
-
 APP_DIR = os.path.dirname(os.path.abspath(__file__))
 FACEASSIST_DIR = os.path.abspath(os.path.join(APP_DIR, ".."))
 SCRIPTS_DIR = os.path.join(FACEASSIST_DIR, "scripts")
