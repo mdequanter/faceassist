@@ -405,6 +405,12 @@ def append_known_features(known_dir: str, person: str, new_features: list) -> in
     return int(new_stack.shape[0])
 
 
+def face_size_range(target_size: int, tolerance: float = 0.20):
+    target = max(1, int(target_size))
+    delta = max(1, int(round(target * float(tolerance))))
+    return max(1, target - delta), target + delta
+
+
 def play_qr_click(duration_ms: int = 70, frequency: int = 1200, volume: int = 100) -> None:
     try:
         sample_rate = 16000
@@ -792,7 +798,7 @@ def main():
         "--detection_size",
         type=int,
         default=settings.get("detection_size", 80),
-        help="Minimale breedte/hoogte in pixels voor QR-registratie.",
+        help="Doelgrootte in pixels voor QR-registratie; foto's worden genomen binnen +/- 20 procent.",
     )
     ap.add_argument(
         "--qr_min_face",
@@ -804,7 +810,7 @@ def main():
         "--qr_photo_count",
         type=int,
         default=5,
-        help="Aantal foto's om te bewaren in known/<QR-naam>/ zodra exact een gezicht groot genoeg is.",
+        help="Aantal foto's om te bewaren in known/<QR-naam>/ zodra exact een gezicht op de juiste afstand is.",
     )
     ap.add_argument(
         "--qr_capture_interval",
@@ -854,7 +860,7 @@ def main():
     args.detection_size = max(1, min(1000, int(args.detection_size)))
     if args.qr_min_face is not None:
         args.detection_size = max(1, min(1000, int(args.qr_min_face)))
-    args.qr_min_face = max(args.min_face, args.detection_size)
+    args.qr_min_face = args.detection_size
     args.qr_photo_count = max(1, int(args.qr_photo_count))
     args.qr_capture_interval = max(0.0, float(args.qr_capture_interval))
     args.control_poll_interval = max(0.1, float(args.control_poll_interval))
@@ -1020,7 +1026,7 @@ def main():
                     try:
                         new_detection_size = max(1, min(1000, int(current_settings["detection_size"])))
                         args.detection_size = new_detection_size
-                        args.qr_min_face = max(args.min_face, new_detection_size)
+                        args.qr_min_face = new_detection_size
                         print(
                             f"[INFO] Settings herladen: detection_size={args.detection_size}px",
                             flush=True,
@@ -1119,7 +1125,7 @@ def main():
                         qr_registration["state"] = "waiting_face"
 
                         print(
-                            f"[QR] QR-tekst uitgesproken. Wacht op 1 groot genoeg gezicht voor {qr_registration['person']}.",
+                            f"[QR] QR-tekst uitgesproken. Wacht op 1 gezicht op de juiste afstand voor {qr_registration['person']}.",
                             flush=True,
                         )
 
@@ -1127,7 +1133,7 @@ def main():
                         qr_registration["state"] = "waiting_face"
 
                         print(
-                            "[WAARSCHUWING] TTS-proces is gestopt; wachten op groot genoeg gezicht.",
+                            "[WAARSCHUWING] TTS-proces is gestopt; wachten op gezicht op de juiste afstand.",
                             flush=True,
                         )
 
@@ -1172,12 +1178,12 @@ def main():
                         if not spoken:
                             qr_registration["state"] = "waiting_face"
                             print(
-                                "[WAARSCHUWING] TTS-wachtrij vol; wachten op groot genoeg gezicht.",
+                                "[WAARSCHUWING] TTS-wachtrij vol; wachten op gezicht op de juiste afstand.",
                                 flush=True,
                             )
                     else:
                         qr_registration["state"] = "waiting_face"
-                        print("[QR] TTS staat uit. Wacht op 1 groot genoeg gezicht.", flush=True)
+                        print("[QR] TTS staat uit. Wacht op 1 gezicht op de juiste afstand.", flush=True)
 
                     break
 
@@ -1210,14 +1216,16 @@ def main():
 
                 x, y, fw, fh = face[:4].astype(int)
                 face_size = min(fw, fh)
+                min_face_size, max_face_size = face_size_range(args.detection_size)
 
                 print (f"[QR] Gezicht gedetecteerd voor {qr_registration['person']} ({face_size}px).", flush=True)
 
-                if face_size < args.qr_min_face:
+                if face_size < min_face_size or face_size > max_face_size:
                     if now - qr_registration.get("last_status_at", 0.0) >= 1.0:
                         print(
-                            f"[QR] Gezicht te klein voor {qr_registration['person']} "
-                            f"({face_size}px, minimum {args.qr_min_face}px).",
+                            f"[QR] Gezicht niet op juiste afstand voor {qr_registration['person']} "
+                            f"({face_size}px, doel {args.detection_size}px, "
+                            f"bereik {min_face_size}-{max_face_size}px).",
                             flush=True,
                         )
                         qr_registration["last_status_at"] = now
@@ -1228,7 +1236,7 @@ def main():
                 qr_registration["last_capture_at"] = 0.0
 
                 print(
-                    f"[QR] 1 gezicht groot genoeg ({face_size}px). Foto's nemen voor "
+                    f"[QR] 1 gezicht op juiste afstand ({face_size}px). Foto's nemen voor "
                     f"{qr_registration['person']}.",
                     flush=True,
                 )
@@ -1278,12 +1286,14 @@ def main():
 
             if qr_registration is not None and qr_registration["state"] == "capturing":
                 face_size = min(fw, fh)
+                min_face_size, max_face_size = face_size_range(args.detection_size)
 
-                if face_size < args.qr_min_face:
+                if face_size < min_face_size or face_size > max_face_size:
                     if now - qr_registration.get("last_status_at", 0.0) >= 1.0:
                         print(
-                            f"[QR] Foto's gepauzeerd: gezicht te klein voor "
-                            f"{qr_registration['person']} ({face_size}px, minimum {args.qr_min_face}px).",
+                            f"[QR] Foto's gepauzeerd: gezicht niet op juiste afstand voor "
+                            f"{qr_registration['person']} ({face_size}px, doel {args.detection_size}px, "
+                            f"bereik {min_face_size}-{max_face_size}px).",
                             flush=True,
                         )
                         qr_registration["last_status_at"] = now
