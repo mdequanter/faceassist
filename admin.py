@@ -112,10 +112,10 @@ def detection_enabled():
     try:
         with open(DETECTION_CONTROL_PATH, "r", encoding="utf-8") as f:
             data = json.load(f)
+            print (data)
         if not isinstance(data, dict):
             return True
         return _coerce_bool(
-            print (data)
             data.get("detection_enabled", data.get("enabled", True)),
             True,
         )
