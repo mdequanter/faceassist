@@ -14,6 +14,7 @@ APP_DIR = os.path.dirname(os.path.abspath(__file__))
 SCRIPTS_DIR = os.path.join(APP_DIR, "scripts")
 SETTINGS_PATH = os.path.join(APP_DIR, "settings.json")
 DETECTION_CONTROL_PATH = os.path.join(APP_DIR, "detection_control.json")
+RECOGNITION_SCRIPT = os.path.join(SCRIPTS_DIR, "launch.py")
 
 print (DETECTION_CONTROL_PATH)
 
