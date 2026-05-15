@@ -111,7 +111,14 @@ def open_preview_camera(cam_index=0, width=640, height=480, fps=15):
     return cap
 
 
-def generate_camera_frames(cam_index=0, width=640, height=480, fps=15):
+def generate_camera_frames(
+    cam_index=0,
+    width=640,
+    height=480,
+    fps=15,
+    smartvision=False,
+    preview_opacity=0.08,
+):
     cap = open_preview_camera(cam_index, width, height, fps)
 
     if cap is None or not cap.isOpened():
@@ -147,6 +154,12 @@ def generate_camera_frames(cam_index=0, width=640, height=480, fps=15):
                 continue
 
             frame = cv2.resize(frame, (width, height))
+            display_frame = frame
+
+            if smartvision:
+                black = np.zeros_like(frame)
+                opacity = max(0.0, min(1.0, float(preview_opacity)))
+                display_frame = cv2.addWeighted(frame, opacity, black, 1.0 - opacity, 0.0)
 
             detector.setInputSize((w, h))
             _, faces = detector.detect(frame)
@@ -158,7 +171,6 @@ def generate_camera_frames(cam_index=0, width=640, height=480, fps=15):
                     face_size = min(fw, fh)
                     in_range = min_face_size <= face_size <= max_face_size
                     box_color = (0, 255, 0) if in_range else (0, 0, 255)
-                    cv2.rectangle(frame, (x, y), (x + fw, y + fh), box_color, 2)
 
                     labels = [f"size: {face_size}px"]
                     if face_size < min_face_size:
@@ -182,10 +194,35 @@ def generate_camera_frames(cam_index=0, width=640, height=480, fps=15):
                         if confident:
                             labels.insert(0, best_name)
 
+                    if smartvision:
+                        if in_range and confident:
+                            font = cv2.FONT_HERSHEY_SIMPLEX
+                            font_scale = 1.2
+                            thickness = 3
+                            text_w, text_h = cv2.getTextSize(best_name, font, font_scale, thickness)[0]
+                            name_x = x + fw + 12
+                            if name_x + text_w > width:
+                                name_x = x - text_w - 12
+                            name_x = min(max(0, name_x), max(0, width - text_w))
+                            name_y = min(max(32, y + (fh // 2)), height - 12)
+                            cv2.putText(
+                                display_frame,
+                                best_name,
+                                (name_x, name_y),
+                                font,
+                                font_scale,
+                                (255, 255, 255),
+                                thickness,
+                                cv2.LINE_AA,
+                            )
+                        continue
+
+                    cv2.rectangle(display_frame, (x, y), (x + fw, y + fh), box_color, 2)
+
                     label_y = max(24, y - 10)
                     for label in reversed(labels):
                         cv2.putText(
-                            frame,
+                            display_frame,
                             label,
                             (x, label_y),
                             cv2.FONT_HERSHEY_SIMPLEX,
@@ -195,7 +232,7 @@ def generate_camera_frames(cam_index=0, width=640, height=480, fps=15):
                         )
                         label_y -= 24
 
-            ok, buffer = cv2.imencode(".jpg", frame)
+            ok, buffer = cv2.imencode(".jpg", display_frame)
 
             if not ok:
                 continue

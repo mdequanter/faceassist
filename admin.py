@@ -372,11 +372,30 @@ def camera_page():
         detection_enabled=detection_enabled(),
     )
 
+@app.route("/smartvision")
+def smartvision_page():
+    return render_template(
+        "smartvision.html",
+        title="Smart Vision",
+        active_page="smartvision",
+        detection_enabled=detection_enabled(),
+    )
+
+
+
 
 @app.route("/camera/feed")
 def camera_feed():
     return app.response_class(
         generate_camera_frames(),
+        mimetype="multipart/x-mixed-replace; boundary=frame",
+    )
+
+
+@app.route("/smartvision/feed")
+def smartvision_feed():
+    return app.response_class(
+        generate_camera_frames(smartvision=True),
         mimetype="multipart/x-mixed-replace; boundary=frame",
     )
 
