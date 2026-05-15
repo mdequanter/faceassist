@@ -10,14 +10,11 @@ import sys
 
 
 APP_DIR = os.path.dirname(os.path.abspath(__file__))
-FACEASSIST_DIR = os.path.abspath(os.path.join(APP_DIR, ".."))
+FACEASSIST_DIR = os.path.abspath(os.path.join(  , ".."))
 SCRIPTS_DIR = os.path.join(FACEASSIST_DIR, "scripts")
 SETTINGS_PATH = os.path.join(FACEASSIST_DIR, "settings.json")
 RECOGNITION_SCRIPT = os.path.join(FACEASSIST_DIR, "nl_launchv2.py")
-DETECTION_CONTROL_PATH = os.environ.get(
-    "FACEASSIST_DETECTION_CONTROL",
-    os.path.join(FACEASSIST_DIR, "detection_control.json"),
-)
+DETECTION_CONTROL_PATH = os.path.join(FACEASSIST_DIR, "detection_control.json")
 
 SERVICE_NAME = os.environ.get("FACEASSIST_SERVICE", "faceassist.service")
 CONFIG_HOST = os.environ.get("CONFIGURATION_HOST", "0.0.0.0")
