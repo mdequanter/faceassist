@@ -8,10 +8,6 @@
     {% for p in people %}
       <div class="card" style="margin:0; display:flex; flex-direction:column; min-height:500px;">
         <h2 style="margin:0 0 6px 0;">{{ p.name }} ({{ p.count }} foto's)</h2>
-          <form action="{{ url_for('known_delete') }}" method="post" style="margin:0;" onsubmit="return confirm('Ben je zeker dat je persoon {{ p.name }} wil verwijderen?');">
-            <input type="hidden" name="person" value="{{ p.name }}">
-            <button class="btn btn-danger" type="submit">Delete person</button>
-          </form>
         {% if p.preview %}
           <div style="margin-top:10px; height:320px; width:100%; background:#f6f6f6; border-radius:12px; overflow:hidden;">
             <a href="{{ url_for('known_person_page', person=p.name) }}" title="Show photos of {{ p.name }}" style="display:block; height:100%; width:100%;">
@@ -20,6 +16,10 @@
                    style="width:100%; height:100%; object-fit:contain; display:block;">
             </a>
           </div>
+          <form action="{{ url_for('known_delete') }}" method="post" style="margin:0;" onsubmit="return confirm('Ben je zeker dat je persoon {{ p.name }} wil verwijderen?');">
+            <input type="hidden" name="person" value="{{ p.name }}">
+            <button class="btn btn-danger" type="submit">Delete person</button>
+          </form>
         {% else %}
           <div style="margin-top:10px; height:320px; width:100%; display:flex; align-items:center; justify-content:center; border:1px dashed #bbb; border-radius:12px; padding:16px; text-align:center;">
             <p class="muted" style="margin:0;">No footos in <span class="mono">known/{{ p.name }}/</span>.</p>
