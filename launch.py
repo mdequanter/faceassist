@@ -792,13 +792,19 @@ def main():
         "--qr_countdown",
         type=int,
         default=10,
-        help="Aantal seconden aftellen na het uitspreken van de QR-inhoud.",
+        help="Verouderd: QR-registratie wacht nu op een groot genoeg gezicht in plaats van af te tellen.",
+    )
+    ap.add_argument(
+        "--qr_min_face",
+        type=int,
+        default=120,
+        help="Minimale breedte/hoogte in pixels voor het gezicht voordat QR-foto's worden genomen.",
     )
     ap.add_argument(
         "--qr_photo_count",
         type=int,
         default=5,
-        help="Aantal foto's om te bewaren in known/<QR-naam>/ na de countdown.",
+        help="Aantal foto's om te bewaren in known/<QR-naam>/ zodra exact een gezicht groot genoeg is.",
     )
     ap.add_argument(
         "--qr_capture_interval",
@@ -846,6 +852,7 @@ def main():
     args.qr_every = max(1, int(args.qr_every))
     args.qr_max_chars = max(0, int(args.qr_max_chars))
     args.qr_countdown = max(0, int(args.qr_countdown))
+    args.qr_min_face = max(args.min_face, int(args.qr_min_face))
     args.qr_photo_count = max(1, int(args.qr_photo_count))
     args.qr_capture_interval = max(0.0, float(args.qr_capture_interval))
     args.control_poll_interval = max(0.1, float(args.control_poll_interval))
@@ -1096,75 +1103,20 @@ def main():
             if qr_registration is not None:
                 if qr_registration["state"] == "waiting_speech":
                     if qr_registration.get("speech_token") in tts_done_tokens:
-                        qr_registration["state"] = "countdown"
-                        qr_registration["next_count"] = args.qr_countdown
-                        qr_registration["next_count_at"] = now
+                        qr_registration["state"] = "waiting_face"
 
                         print(
-                            f"[QR] QR-tekst uitgesproken. Countdown start voor {qr_registration['person']}.",
+                            f"[QR] QR-tekst uitgesproken. Wacht op 1 groot genoeg gezicht voor {qr_registration['person']}.",
                             flush=True,
                         )
 
                     elif speak_enabled and tts_proc is not None and not tts_proc.is_alive():
-                        qr_registration["state"] = "countdown"
-                        qr_registration["next_count"] = args.qr_countdown
-                        qr_registration["next_count_at"] = now
+                        qr_registration["state"] = "waiting_face"
 
                         print(
-                            "[WAARSCHUWING] TTS-proces is gestopt; countdown start zonder spraakbevestiging.",
+                            "[WAARSCHUWING] TTS-proces is gestopt; wachten op groot genoeg gezicht.",
                             flush=True,
                         )
-
-                if qr_registration["state"] == "waiting_countdown_done":
-                    if qr_registration.get("countdown_token") in tts_done_tokens:
-                        qr_registration["state"] = "capturing"
-                        qr_registration["last_capture_at"] = 0.0
-
-                        print(
-                            f"[QR] Countdown klaar. Foto's nemen voor {qr_registration['person']}.",
-                            flush=True,
-                        )
-
-                        if not args.no_qr_clicks:
-                            play_qr_click(volume=args.voice_volume)
-
-                    elif speak_enabled and tts_proc is not None and not tts_proc.is_alive():
-                        qr_registration["state"] = "capturing"
-                        qr_registration["last_capture_at"] = 0.0
-
-                        print("[WAARSCHUWING] TTS-proces is gestopt; foto's nemen.", flush=True)
-
-                        if not args.no_qr_clicks:
-                            play_qr_click(volume=args.voice_volume)
-
-                if qr_registration["state"] == "countdown" and now >= qr_registration["next_count_at"]:
-                    count = qr_registration["next_count"]
-
-                    print(f"[QR] Countdown: {count}", flush=True)
-
-                    if count == 0:
-                        token = f"qr-countdown:{qr_registration['id']}"
-                        qr_registration["countdown_token"] = token
-
-                        if speak_enabled and tts_enqueue(tts_queue, str(count), done_token=token):
-                            qr_registration["state"] = "waiting_countdown_done"
-                        else:
-                            qr_registration["state"] = "capturing"
-                            qr_registration["last_capture_at"] = 0.0
-
-                            print(
-                                f"[QR] Countdown klaar. Foto's nemen voor {qr_registration['person']}.",
-                                flush=True,
-                            )
-
-                            if not args.no_qr_clicks:
-                                play_qr_click(volume=args.voice_volume)
-                    else:
-                        if speak_enabled:
-                            tts_enqueue(tts_queue, str(count))
-
-                        qr_registration["next_count"] = count - 1
-                        qr_registration["next_count_at"] = now + 1.0
 
             if qr_enabled and qr_registration is None and qr_detector is not None and frame_id % args.qr_every == 0:
                 for qr_text in decode_qr_codes(qr_detector, frame):
@@ -1189,9 +1141,6 @@ def main():
                         "person": qr_name,
                         "state": "waiting_speech",
                         "speech_token": speech_token,
-                        "countdown_token": None,
-                        "next_count": args.qr_countdown,
-                        "next_count_at": now,
                         "captured": 0,
                         "features_added": 0,
                         "last_capture_at": 0.0,
@@ -1208,18 +1157,21 @@ def main():
                         )
 
                         if not spoken:
-                            qr_registration["state"] = "countdown"
+                            qr_registration["state"] = "waiting_face"
                             print(
-                                "[WAARSCHUWING] TTS-wachtrij vol; countdown start zonder QR-spraakbevestiging.",
+                                "[WAARSCHUWING] TTS-wachtrij vol; wachten op groot genoeg gezicht.",
                                 flush=True,
                             )
                     else:
-                        qr_registration["state"] = "countdown"
-                        print("[QR] TTS staat uit. Countdown start.", flush=True)
+                        qr_registration["state"] = "waiting_face"
+                        print("[QR] TTS staat uit. Wacht op 1 groot genoeg gezicht.", flush=True)
 
                     break
 
-            if qr_registration is not None and qr_registration["state"] != "capturing":
+            if (
+                qr_registration is not None
+                and qr_registration["state"] not in ("waiting_face", "capturing")
+            ):
                 continue
 
             if frame_id % args.infer_every != 0:
@@ -1228,7 +1180,57 @@ def main():
             detector.setInputSize((w, h))
 
             _, faces = detector.detect(frame)
+            face_count = 0 if faces is None else len(faces)
             face = largest_face(faces)
+
+            if qr_registration is not None and qr_registration["state"] == "waiting_face":
+                if face_count != 1:
+                    if now - qr_registration.get("last_status_at", 0.0) >= 1.0:
+                        print(
+                            f"[QR] Wacht op exact 1 gezicht voor {qr_registration['person']} "
+                            f"(gedetecteerd: {face_count}).",
+                            flush=True,
+                        )
+                        qr_registration["last_status_at"] = now
+
+                    continue
+
+                x, y, fw, fh = face[:4].astype(int)
+                face_size = min(fw, fh)
+
+                if face_size < args.qr_min_face:
+                    if now - qr_registration.get("last_status_at", 0.0) >= 1.0:
+                        print(
+                            f"[QR] Gezicht te klein voor {qr_registration['person']} "
+                            f"({face_size}px, minimum {args.qr_min_face}px).",
+                            flush=True,
+                        )
+                        qr_registration["last_status_at"] = now
+
+                    continue
+
+                qr_registration["state"] = "capturing"
+                qr_registration["last_capture_at"] = 0.0
+
+                print(
+                    f"[QR] 1 gezicht groot genoeg ({face_size}px). Foto's nemen voor "
+                    f"{qr_registration['person']}.",
+                    flush=True,
+                )
+
+                if not args.no_qr_clicks:
+                    play_qr_click(volume=args.voice_volume)
+
+            if qr_registration is not None and qr_registration["state"] == "capturing" and face_count != 1:
+                if now - qr_registration.get("last_status_at", 0.0) >= 1.0:
+                    print(
+                        f"[QR] Foto's gepauzeerd: exact 1 gezicht nodig voor "
+                        f"{qr_registration['person']} (gedetecteerd: {face_count}).",
+                        flush=True,
+                    )
+                    qr_registration["last_status_at"] = now
+
+                continue
 
             if face is None:
                 if qr_registration is not None and qr_registration["state"] == "capturing":
@@ -1259,17 +1261,21 @@ def main():
 
             x, y, fw, fh = face[:4].astype(int)
 
-            if fw < args.min_face:
-                if qr_registration is not None and qr_registration["state"] == "capturing":
+            if qr_registration is not None and qr_registration["state"] == "capturing":
+                face_size = min(fw, fh)
+
+                if face_size < args.qr_min_face:
                     if now - qr_registration.get("last_status_at", 0.0) >= 1.0:
                         print(
-                            f"[QR] Gezicht te klein voor {qr_registration['person']} ({fw}px).",
+                            f"[QR] Foto's gepauzeerd: gezicht te klein voor "
+                            f"{qr_registration['person']} ({face_size}px, minimum {args.qr_min_face}px).",
                             flush=True,
                         )
                         qr_registration["last_status_at"] = now
 
                     continue
 
+            elif fw < args.min_face:
                 if present and now - last_seen >= args.lost_timeout:
                     print(f"[INFO] {present_name} is uit beeld.", flush=True)
 
