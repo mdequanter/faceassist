@@ -806,7 +806,7 @@ def main():
     ap.add_argument("--piper_rate", type=int, default=22050)
     ap.add_argument("--piper_rate_auto", action="store_true")
     ap.add_argument("--piper_length_scale", type=float, default=1.0)
-    ap.add_argument("--voice_volume", type=int, default=100)
+    ap.add_argument("--voice_volume", type=int, default=20)
     ap.add_argument("--tts_queue_size", type=int, default=20)
 
     # Detectie-control
