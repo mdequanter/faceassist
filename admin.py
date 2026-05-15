@@ -7,6 +7,8 @@ import threading
 import time
 import sys
 import secrets
+import csv
+from datetime import datetime, timedelta
 from werkzeug.security import check_password_hash, generate_password_hash
 
 
@@ -17,6 +19,7 @@ SCRIPTS_DIR = os.path.join(APP_DIR, "scripts")
 SETTINGS_PATH = os.path.join(APP_DIR, "settings.json")
 DETECTION_CONTROL_PATH = os.path.join(APP_DIR, "detection_control.json")
 RECOGNITION_SCRIPT = os.path.join(SCRIPTS_DIR, "launch.py")
+DETECTED_FACES_LOG_PATH = os.path.join(APP_DIR, "logs", "detectedFaces.csv")
 
 
 SERVICE_NAME = os.environ.get("FACEASSIST_SERVICE", "faceassist.service")
@@ -198,6 +201,78 @@ def save_detection_enabled(enabled):
         f.write("\n")
     os.replace(tmp_path, DETECTION_CONTROL_PATH)
     return payload["detection_enabled"]
+
+
+def _empty_detected_faces_log():
+    os.makedirs(os.path.dirname(DETECTED_FACES_LOG_PATH), exist_ok=True)
+    with open(DETECTED_FACES_LOG_PATH, "w", encoding="utf-8", newline="") as f:
+        writer = csv.writer(f)
+        writer.writerow(["time", "Name", "size"])
+
+
+def _parse_visit_time(value):
+    text = str(value or "").strip()
+    if not text:
+        return None
+    try:
+        return datetime.fromisoformat(text)
+    except ValueError:
+        return None
+
+
+def read_detected_faces_log():
+    if not os.path.isfile(DETECTED_FACES_LOG_PATH):
+        return []
+
+    visits = []
+    with open(DETECTED_FACES_LOG_PATH, "r", encoding="utf-8", newline="") as f:
+        reader = csv.DictReader(f, skipinitialspace=True)
+        for row in reader:
+            if not row:
+                continue
+            visits.append(
+                {
+                    "time": (row.get("time") or "").strip(),
+                    "name": (row.get("Name") or row.get("name") or "").strip(),
+                    "size": (row.get("size") or "").strip(),
+                }
+            )
+
+    visits.reverse()
+    return visits
+
+
+def prune_detected_faces_log(days=31):
+    cutoff = datetime.now() - timedelta(days=days)
+    kept = []
+    removed = 0
+
+    if os.path.isfile(DETECTED_FACES_LOG_PATH):
+        with open(DETECTED_FACES_LOG_PATH, "r", encoding="utf-8", newline="") as f:
+            reader = csv.DictReader(f, skipinitialspace=True)
+            for row in reader:
+                if not row:
+                    continue
+
+                visit_time = _parse_visit_time(row.get("time"))
+                if visit_time is not None and visit_time < cutoff:
+                    removed += 1
+                    continue
+
+                kept.append(
+                    [
+                        (row.get("time") or "").strip(),
+                        (row.get("Name") or row.get("name") or "").strip(),
+                        (row.get("size") or "").strip(),
+                    ]
+                )
+
+    _empty_detected_faces_log()
+    with open(DETECTED_FACES_LOG_PATH, "a", encoding="utf-8", newline="") as f:
+        writer = csv.writer(f)
+        writer.writerows(kept)
+
+    return removed
 
 
 def _run_command(cmd, timeout=12):
@@ -410,6 +485,35 @@ def faces_page():
         msg=request.args.get("msg", ""),
         level=request.args.get("level", "info"),
     )
+
+
+@app.route("/logs")
+def logs_page():
+    return render_template(
+        "logs.html",
+        title="Visit Logs",
+        visits=read_detected_faces_log(),
+        msg=request.args.get("msg", ""),
+        level=request.args.get("level", "info"),
+    )
+
+
+@app.route("/logs/clear", methods=["POST"])
+def clear_logs():
+    try:
+        _empty_detected_faces_log()
+    except Exception as exc:
+        return redirect(url_for("logs_page", msg=f"Failed to clear logs: {exc}", level="error"))
+    return redirect(url_for("logs_page", msg="Visit log cleared.", level="ok"))
+
+
+@app.route("/logs/prune", methods=["POST"])
+def prune_logs():
+    try:
+        removed = prune_detected_faces_log(days=31)
+    except Exception as exc:
+        return redirect(url_for("logs_page", msg=f"Failed to delete old records: {exc}", level="error"))
+    return redirect(url_for("logs_page", msg=f"Deleted {removed} old record(s).", level="ok"))
 
 
 @app.route("/known/<person>")

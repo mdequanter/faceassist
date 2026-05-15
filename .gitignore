@@ -1,3 +1,4 @@
 /scripts/__pycache__
 logs/detectedFaces.csv
 *.csv
+/logs

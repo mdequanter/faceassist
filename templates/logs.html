@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+
+{% block content %}
+  <h1>Visit Logs</h1>
+
+  {% if msg %}
+    <div class="notice {{ level }}">{{ msg }}</div>
+  {% endif %}
+
+  <section class="panel" style="margin-top:18px;">
+    <div class="actions" style="margin-top:0;">
+      <form method="post" action="{{ url_for('clear_logs') }}">
+        <button class="btn btn-danger" type="submit" onclick="return confirm('Empty the complete visit log?');">Empty list</button>
+      </form>
+      <form method="post" action="{{ url_for('prune_logs') }}">
+        <button class="btn" type="submit" onclick="return confirm('Delete records older than 1 month?');">Delete old records</button>
+      </form>
+      <a class="btn" href="{{ url_for('logs_page') }}">Refresh</a>
+    </div>
+  </section>
+
+  <section class="panel" style="margin-top:16px;">
+    {% if visits %}
+      <div style="overflow-x:auto;">
+        <table style="width:100%; border-collapse:collapse;">
+          <thead>
+            <tr>
+              <th style="text-align:left; border-bottom:1px solid var(--line); padding:10px;">Time</th>
+              <th style="text-align:left; border-bottom:1px solid var(--line); padding:10px;">Name</th>
+              <th style="text-align:right; border-bottom:1px solid var(--line); padding:10px;">Size</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for visit in visits %}
+              <tr>
+                <td style="border-bottom:1px solid var(--line); padding:10px;">{{ visit.time }}</td>
+                <td style="border-bottom:1px solid var(--line); padding:10px; font-weight:700;">{{ visit.name }}</td>
+                <td style="border-bottom:1px solid var(--line); padding:10px; text-align:right;">{{ visit.size }}</td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      <p class="muted">No visits logged yet.</p>
+    {% endif %}
+  </section>
+{% endblock %}
