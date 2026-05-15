@@ -29,8 +29,8 @@ import re
 import csv
 from datetime import datetime
 
-#YUNET_URL = "https://github.com/opencv/opencv_zoo/raw/main/models/face_detection_yunet/face_detection_yunet_2023mar.onnx"
-#SFACE_URL = "https://github.com/opencv/opencv_zoo/raw/main/models/face_recognition_sface/face_recognition_sface_2021dec.onnx"
+YUNET_URL = "https://github.com/opencv/opencv_zoo/raw/main/models/face_detection_yunet/face_detection_yunet_2023mar.onnx"
+SFACE_URL = "https://github.com/opencv/opencv_zoo/raw/main/models/face_recognition_sface/face_recognition_sface_2021dec.onnx"
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 SAFE_PERSON_RE = re.compile(r"[^A-Za-z0-9_-]+")
@@ -45,15 +45,6 @@ DETECTED_FACES_LOG_PATH = os.path.join(BASE_DIR, "logs", "detectedFaces.csv")
 # -----------------------------
 # Helpers
 # -----------------------------
-
-def download_if_missing(url: str, path: str) -> None:
-    os.makedirs(os.path.dirname(path), exist_ok=True)
-    if os.path.exists(path):
-        return
-
-    print(f"[INFO] Downloading: {os.path.basename(path)} ...", flush=True)
-    urllib.request.urlretrieve(url, path)
-    print(f"[OK] Saved to {path}", flush=True)
 
 
 def load_known(known_dir: str):
@@ -888,6 +879,10 @@ def main():
     args.qr_photo_count = max(1, int(args.qr_photo_count))
     args.qr_capture_interval = max(0.0, float(args.qr_capture_interval))
     args.control_poll_interval = max(0.1, float(args.control_poll_interval))
+
+    yunet_path = os.path.join("models", "face_detection_yunet_2023mar.onnx")
+    sface_path = os.path.join("models", "face_recognition_sface_2021dec.onnx")
+
 
     os.makedirs(args.known, exist_ok=True)
 
