@@ -16,7 +16,6 @@ SETTINGS_PATH = os.path.join(APP_DIR, "settings.json")
 DETECTION_CONTROL_PATH = os.path.join(APP_DIR, "detection_control.json")
 RECOGNITION_SCRIPT = os.path.join(SCRIPTS_DIR, "launch.py")
 
-print (DETECTION_CONTROL_PATH)
 
 SERVICE_NAME = os.environ.get("FACEASSIST_SERVICE", "faceassist.service")
 CONFIG_HOST = os.environ.get("CONFIGURATION_HOST", "0.0.0.0")
@@ -108,7 +107,6 @@ def detection_enabled():
     try:
         with open(DETECTION_CONTROL_PATH, "r", encoding="utf-8") as f:
             data = json.load(f)
-            print (DETECTION_CONTROL_PATH, data)
         if not isinstance(data, dict):
             return True
         return _coerce_bool(
