@@ -211,11 +211,9 @@ def generate_camera_frames(
                             font_scale = 1.2
                             thickness = 3
                             text_w, text_h = cv2.getTextSize(best_name, font, font_scale, thickness)[0]
-                            name_x = x + fw + 12
-                            if name_x + text_w > width:
-                                name_x = x - text_w - 12
+                            name_x = x + ((fw - text_w) // 2)
                             name_x = min(max(0, name_x), max(0, width - text_w))
-                            name_y = min(max(32, y + (fh // 2)), height - 12)
+                            name_y = max(text_h + 8, y - 12)
                             cv2.putText(
                                 display_frame,
                                 best_name,
