@@ -51,6 +51,22 @@ def _default_settings():
     }
 
 
+def _coerce_bool(value, default_value=False):
+    if isinstance(value, bool):
+        return value
+
+    if isinstance(value, (int, float)):
+        return bool(value)
+
+    text = str(value).strip().lower()
+    if text in ("1", "true", "yes", "y", "on", "ja", "j"):
+        return True
+    if text in ("0", "false", "no", "n", "off", "nee", "niet"):
+        return False
+
+    return bool(default_value)
+
+
 def load_settings():
     defaults = _default_settings()
     if not os.path.isfile(SETTINGS_PATH):
@@ -98,7 +114,10 @@ def detection_enabled():
             data = json.load(f)
         if not isinstance(data, dict):
             return True
-        return bool(data.get("detection_enabled", data.get("enabled", True)))
+        return _coerce_bool(
+            data.get("detection_enabled", data.get("enabled", True)),
+            True,
+        )
     except Exception:
         return True
 
