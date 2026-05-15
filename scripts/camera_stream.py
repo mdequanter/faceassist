@@ -119,7 +119,19 @@ def generate_camera_frames(
     smartvision=False,
     preview_opacity=0.08,
 ):
-    cap = open_preview_camera(cam_index, width, height, fps)
+    cap = None
+    camera_deadline = time.time() + 20.0
+
+    while time.time() < camera_deadline:
+        cap = open_preview_camera(cam_index, width, height, fps)
+
+        if cap is not None and cap.isOpened():
+            break
+
+        if cap is not None:
+            cap.release()
+
+        time.sleep(0.5)
 
     if cap is None or not cap.isOpened():
         print("[FOUT] Preview camera kon niet geopend worden.", flush=True)

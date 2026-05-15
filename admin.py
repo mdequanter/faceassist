@@ -374,11 +374,13 @@ def camera_page():
 
 @app.route("/smartvision")
 def smartvision_page():
+    if detection_enabled():
+        save_detection_enabled(False)
+
     return render_template(
         "smartvision.html",
         title="Smart Vision",
         active_page="smartvision",
-        detection_enabled=detection_enabled(),
     )
 
 

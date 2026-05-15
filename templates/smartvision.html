@@ -30,13 +30,11 @@
   </style>
 </head>
 <body>
-  {% if not detection_enabled %}
-    <img
-      class="smartvision-frame"
-      src="{{ url_for('smartvision_feed') }}"
-      alt=""
-      aria-hidden="true"
-    >
-  {% endif %}
+  <img
+    class="smartvision-frame"
+    src="{{ url_for('smartvision_feed') }}"
+    alt=""
+    aria-hidden="true"
+  >
 </body>
 </html>

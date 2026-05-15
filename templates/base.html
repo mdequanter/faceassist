@@ -327,6 +327,7 @@
         {% if session.admin_authenticated %}
           <a href="{{ url_for('control_page') }}">Control</a>
           <a href="{{ url_for('camera_page') }}">Camera</a>
+          <a href="{{ url_for('smartvision_page') }}">Smart Vision</a>
           <a href="{{ url_for('faces_page') }}">Faces</a>
           <form method="post" action="{{ url_for('logout') }}" style="margin:0;">
             <button class="btn" type="submit">Logout</button>
