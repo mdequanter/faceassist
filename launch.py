@@ -909,7 +909,7 @@ def main():
         if args.no_qr:
             tts_enqueue(tts_queue, "Face recognition has started.")
         else:
-            tts_enqueue(tts_queue, "Face recognition and QR scanner have started.")
+            tts_enqueue(tts_queue, "Face assist has started.")
 
     cap = None
 
