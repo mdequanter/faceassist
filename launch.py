@@ -1,16 +1,16 @@
 #!/usr/bin/env python3
 """
-Headless gezichtsherkenning + "auto-opslaan bij onbekende persoon" (OpenCV YuNet + SFace)
+Headless face recognition with optional unknown-person handling (OpenCV YuNet + SFace)
 
-AANGEPAST:
-- Het script gebruikt enkel de lokale camera via --cam.
-- Externe camera-URL's zijn verwijderd.
-- Wanneer detection_control.json aangeeft dat detection_enabled false is, wordt de camera vrijgegeven met cap.release().
-- Terwijl detectie uit staat, blijft het script draaien en wordt detection_control.json periodiek gecontroleerd.
-- Wanneer detection_enabled opnieuw true wordt, wordt de lokale camera opnieuw geopend.
+Behavior:
+- The script uses only the local camera through --cam.
+- External camera URLs were removed.
+- When detection_control.json sets detection_enabled to false, the camera is released with cap.release().
+- While detection is disabled, the script keeps running and periodically checks detection_control.json.
+- When detection_enabled becomes true again, the local camera is reopened.
 
 TTS (Piper):
-- Standaard voice: nl_BE-nathalie-medium.onnx (+ .json)
+- Default voice: nl_BE-nathalie-medium.onnx (+ .json)
 """
 
 import os
@@ -49,9 +49,9 @@ def download_if_missing(url: str, path: str) -> None:
     if os.path.exists(path):
         return
 
-    print(f"[INFO] Downloaden: {os.path.basename(path)} ...", flush=True)
+    print(f"[INFO] Downloading: {os.path.basename(path)} ...", flush=True)
     urllib.request.urlretrieve(url, path)
-    print(f"[OK] Opgeslagen naar {path}", flush=True)
+    print(f"[OK] Saved to {path}", flush=True)
 
 
 def load_known(known_dir: str):
@@ -130,15 +130,15 @@ def best_match(recognizer, feat, known: dict):
     return best_name, best_score, second_score
 
 
-def face_direction_nl(x: int, w_face: int, frame_w: int) -> str:
+def face_direction_en(x: int, w_face: int, frame_w: int) -> str:
     cx = x + (w_face // 2)
 
     if cx < frame_w / 3:
-        return "is links van je"
-    elif cx > 2 * frame_w / 3:
-        return "is rechts van je"
+        return "is on your left"
+    if cx > 2 * frame_w / 3:
+        return "is on your right"
 
-    return "staat voor je"
+    return "is in front of you"
 
 
 def normalize_qr_text(text: str) -> str:
@@ -204,7 +204,7 @@ def open_camera_linux(cam_index: int, width: int, height: int, fps: int):
 
     cap = cv2.VideoCapture(gst_pipeline, cv2.CAP_GSTREAMER)
     if cap.isOpened():
-        print("[INFO] Camera geopend via GStreamer.", flush=True)
+        print("[INFO] Camera opened with GStreamer.", flush=True)
         return cap
 
     cap = cv2.VideoCapture(cam_index, cv2.CAP_V4L2)
@@ -212,7 +212,7 @@ def open_camera_linux(cam_index: int, width: int, height: int, fps: int):
         cap.set(cv2.CAP_PROP_FRAME_WIDTH, width)
         cap.set(cv2.CAP_PROP_FRAME_HEIGHT, height)
         cap.set(cv2.CAP_PROP_FPS, fps)
-        print("[INFO] Camera geopend via V4L2 (OpenCV).", flush=True)
+        print("[INFO] Camera opened with V4L2 (OpenCV).", flush=True)
         return cap
 
     cap = cv2.VideoCapture(cam_index)
@@ -220,7 +220,7 @@ def open_camera_linux(cam_index: int, width: int, height: int, fps: int):
         cap.set(cv2.CAP_PROP_FRAME_WIDTH, width)
         cap.set(cv2.CAP_PROP_FRAME_HEIGHT, height)
         cap.set(cv2.CAP_PROP_FPS, fps)
-        print("[INFO] Camera geopend via standaard backend (OpenCV).", flush=True)
+        print("[INFO] Camera opened with the default backend (OpenCV).", flush=True)
         return cap
 
     return cap
@@ -263,13 +263,13 @@ def ask_input(prompt: str) -> str:
 
 
 # -----------------------------
-# Foto snapshot
+# Photo snapshot
 # -----------------------------
 
 def save_person_snapshot(frame, name: str, out_dir: str = "snapshots") -> str:
     os.makedirs(out_dir, exist_ok=True)
 
-    safe_name = sanitize_name(name) if name else "Onbekend"
+    safe_name = sanitize_name(name) if name else "Unknown"
     ts = datetime.now().strftime("%Y_%m_%d_%H_%M_%S")
     path = os.path.join(out_dir, f"{safe_name}_{ts}.jpg")
 
@@ -279,7 +279,7 @@ def save_person_snapshot(frame, name: str, out_dir: str = "snapshots") -> str:
 
 
 # -----------------------------
-# Unknown foto opslag
+# Unknown photo storage
 # -----------------------------
 
 def save_unknown_photo(frame, face_row, out_dir: str, idx: int) -> str:
@@ -299,7 +299,7 @@ def save_unknown_photo(frame, face_row, out_dir: str, idx: int) -> str:
     crop = frame[y1:y2, x1:x2]
 
     if crop is None or crop.size == 0:
-        raise RuntimeError("Lege face-crop")
+        raise RuntimeError("Empty face crop")
 
     ts = datetime.now().strftime("%Y%m%d_%H%M%S_%f")
     path = os.path.join(out_dir, f"{ts}_{idx:04d}.jpg")
@@ -327,7 +327,7 @@ def save_known_qr_photo(frame, face_row, known_dir: str, person: str, idx: int) 
     crop = frame[y1:y2, x1:x2]
 
     if crop is None or crop.size == 0:
-        raise RuntimeError("Lege QR face-crop")
+        raise RuntimeError("Empty QR face crop")
 
     ts = datetime.now().strftime("%Y%m%d_%H%M%S_%f")
     path = unique_path(os.path.join(person_dir, f"{ts}_qr_{idx:04d}.jpg"))
@@ -534,13 +534,13 @@ def tts_worker_loop(tts_queue, stop_event, args, done_queue=None, voice_volume_v
     try:
         subprocess.run(["piper", "--help"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, check=False)
     except FileNotFoundError:
-        print("[WAARSCHUWING] 'piper' niet gevonden in PATH.", flush=True)
+        print("[WARNING] 'piper' was not found in PATH.", flush=True)
         return
 
     model_path = os.path.expanduser(args.piper_model)
 
     if not os.path.exists(model_path):
-        print(f"[WAARSCHUWING] Piper model niet gevonden: {model_path}", flush=True)
+        print(f"[WARNING] Piper model not found: {model_path}", flush=True)
         return
 
     sample_rate = args.piper_rate
@@ -641,7 +641,7 @@ class DetectionControl:
                 self._enabled = self.default_enabled
 
         except Exception as exc:
-            print(f"[WAARSCHUWING] Detectie-control lezen mislukt: {exc}", flush=True)
+            print(f"[WARNING] Failed to read detection control file: {exc}", flush=True)
             self._enabled = self.default_enabled
 
         return self._enabled
@@ -663,14 +663,14 @@ def drain_done_queue(done_queue) -> set:
 
 
 # -----------------------------
-# Snapshot opslag
+# Snapshot storage
 # -----------------------------
 
 def save_snapshot(frame, out_dir: str, tag: str) -> str:
     os.makedirs(out_dir, exist_ok=True)
 
     ts = datetime.now().strftime("%Y%m%d_%H%M%S")
-    safe_tag = sanitize_name(tag) if tag else "onbekend"
+    safe_tag = sanitize_name(tag) if tag else "unknown"
     path = os.path.join(out_dir, f"{ts}_{safe_tag}.jpg")
 
     cv2.imwrite(path, frame)
@@ -688,7 +688,7 @@ def main():
 
     ap = argparse.ArgumentParser()
 
-    # Camera + detectie
+    # Camera and detection
     ap.add_argument("--cam", type=int, default=0)
     ap.add_argument("--width", type=int, default=640)
     ap.add_argument("--height", type=int, default=480)
@@ -700,7 +700,7 @@ def main():
     ap.add_argument("--nms_th", type=float, default=0.3)
     ap.add_argument("--topk", type=int, default=5000)
 
-    # Herkenning
+    # Recognition
     ap.add_argument("--threshold", type=float, default=0.60)
     ap.add_argument("--margin", type=float, default=0.06)
 
@@ -709,96 +709,96 @@ def main():
     ap.add_argument("--enter_confirm_frames", type=int, default=3)
     ap.add_argument("--reannounce_after", type=float, default=6.0)
 
-    # Onbekend gedrag
+    # Unknown-person behavior
     ap.add_argument(
         "--unknown_seconds",
         type=float,
         default=5.0,
-        help="(oud) Als een onbekend gezicht zo lang zichtbaar blijft, vragen om op te slaan.",
+        help="(legacy) If an unknown face stays visible this long, ask to save it.",
     )
     ap.add_argument(
         "--unknown_confirm_frames",
         type=int,
         default=5,
-        help="Aantal opeenvolgende 'onbekend' frames voor we starten.",
+        help="Number of consecutive 'unknown' frames before starting.",
     )
     ap.add_argument(
         "--cooldown_after_unknown",
         type=float,
         default=300.0,
-        help="Na een onbekend-afhandeling even wachten.",
+        help="Wait this long after handling an unknown person.",
     )
 
     ap.add_argument(
         "--unknown_capture_interval",
         type=float,
         default=0.5,
-        help="(oud) Tijdens onbekend: neem een feature-snapshot om de N seconden.",
+        help="(legacy) During unknown handling: take a feature snapshot every N seconds.",
     )
     ap.add_argument(
         "--unknown_max_snaps",
         type=int,
         default=60,
-        help="(oud) Max aantal feature-snapshots dat we bijhouden.",
+        help="(legacy) Maximum number of feature snapshots to keep.",
     )
 
-    # Opslag
+    # Storage
     ap.add_argument(
         "--known",
         type=str,
         default=os.path.join(BASE_DIR, "known"),
-        help="Map met .npz identiteiten",
+        help="Directory with .npz identities",
     )
     ap.add_argument(
         "--min_save_samples",
         type=int,
         default=20,
-        help="(oud) Niet opslaan als er te weinig snapshots zijn",
+        help="(legacy) Do not save if there are too few snapshots",
     )
 
-    # Foto's
+    # Photos
     ap.add_argument(
         "--unknown_photos",
         type=str,
         default="unknown_photos",
-        help="(oud) Map om optioneel een JPG te bewaren",
+        help="(legacy) Directory for optionally saving a JPG",
     )
     ap.add_argument(
         "--save_unknown_snapshot",
         action="store_true",
-        help="(oud) Bewaar ook 1 JPG wanneer je een nieuwe persoon opslaat.",
+        help="(legacy) Also save one JPG when saving a new person.",
     )
 
     # QR-code scanner
-    ap.add_argument("--no_qr", action="store_true", help="QR-code scanner uitschakelen.")
-    ap.add_argument("--qr_every", type=int, default=5, help="Scan elke N frames op QR-codes.")
+    ap.add_argument("--no_qr", action="store_true", help="Disable the QR-code scanner.")
+    ap.add_argument("--qr_every", type=int, default=5, help="Scan for QR codes every N frames.")
     ap.add_argument(
         "--qr_cooldown",
         type=float,
         default=8.0,
-        help="Aantal seconden voordat dezelfde QR-code opnieuw wordt uitgesproken.",
+        help="Seconds before the same QR code is announced again.",
     )
     ap.add_argument(
         "--qr_max_chars",
         type=int,
         default=500,
-        help="Maximaal aantal QR-tekens voor TTS. Gebruik 0 voor onbeperkt.",
+        help="Maximum number of QR characters for TTS. Use 0 for unlimited.",
     )
     ap.add_argument(
         "--qr_prefix",
         type=str,
         default=(
-            "Dank je wel om je te registreren. "
-            "Ga enkele seconden in de deuropening staan met je gezicht naar de camera, "
-            "je zal worden geregistreerd onder de naam: "
+            "Thank you for registering. "
+            "Stand in the doorway for a few seconds with your face toward the camera. "
+            "You will be registered under the name: "
         ),
-        help="Tekst die voor de QR-inhoud wordt uitgesproken.",
+        help="Text spoken before the QR content.",
     )
     ap.add_argument(
         "--detection_size",
         type=int,
         default=settings.get("detection_size", 80),
-        help="Doelgrootte in pixels voor QR-registratie; foto's worden genomen binnen +/- 20 procent.",
+        help="Target size in pixels for QR registration; photos are taken within +/- 20 percent.",
     )
     ap.add_argument(
         "--qr_min_face",
@@ -810,18 +810,18 @@ def main():
         "--qr_photo_count",
         type=int,
         default=5,
-        help="Aantal foto's om te bewaren in known/<QR-naam>/ zodra exact een gezicht op de juiste afstand is.",
+        help="Number of photos to save in known/<QR-name>/ once exactly one face is at the correct distance.",
     )
     ap.add_argument(
         "--qr_capture_interval",
         type=float,
         default=0.5,
-        help="Tijd tussen QR-registratiefoto's in seconden.",
+        help="Time between QR registration photos in seconds.",
     )
     ap.add_argument(
         "--no_qr_clicks",
         action="store_true",
-        help="Geen korte klik/beep afspelen bij start capture en per QR-foto.",
+        help="Do not play a short click/beep at capture start or for each QR photo.",
     )
 
     # Piper TTS
@@ -838,18 +838,18 @@ def main():
     ap.add_argument("--voice_volume", type=int, default=settings.get("voice_volume", 20))
     ap.add_argument("--tts_queue_size", type=int, default=20)
 
-    # Detectie-control
+    # Detection control
     ap.add_argument(
         "--control_file",
         type=str,
         default=DEFAULT_DETECTION_CONTROL_PATH,
-        help="JSON-bestand waarmee detectie aan/uit gezet wordt zonder het proces te stoppen.",
+        help="JSON file used to enable/disable detection without stopping the process.",
     )
     ap.add_argument(
         "--control_poll_interval",
         type=float,
         default=10.0,
-        help="Aantal seconden tussen checks van het detectie-controlbestand.",
+        help="Seconds between detection-control file checks.",
     )
 
     args = ap.parse_args()
@@ -894,9 +894,9 @@ def main():
         tts_proc.start()
 
         if args.no_qr:
-            tts_enqueue(tts_queue, "Gezichtsherkenning is gestart.")
+            tts_enqueue(tts_queue, "Face recognition has started.")
         else:
-            tts_enqueue(tts_queue, "Gezichtsherkenning en QR scanner zijn gestart.")
+            tts_enqueue(tts_queue, "Face recognition and QR scanner have started.")
 
     cap = None
 
@@ -904,7 +904,7 @@ def main():
     cap = open_camera_linux(args.cam, args.width, args.height, args.fps)
 
     if cap is None or not cap.isOpened():
-        print("[FOUT] Kan camera niet openen.", flush=True)
+        print("[ERROR] Cannot open camera.", flush=True)
         stop_event.set()
 
         if tts_queue is not None:
@@ -918,7 +918,7 @@ def main():
     ok, frame = cap.read()
 
     if not ok or frame is None:
-        print("[FOUT] Kan eerste frame niet lezen.", flush=True)
+        print("[ERROR] Cannot read first frame.", flush=True)
 
         if cap is not None:
             cap.release()
@@ -944,23 +944,23 @@ def main():
     if qr_enabled:
         try:
             qr_detector = cv2.QRCodeDetector()
-            print("[INFO] QR-scanner actief.", flush=True)
+            print("[INFO] QR scanner is active.", flush=True)
         except Exception as e:
             qr_enabled = False
-            print(f"[WAARSCHUWING] QR-scanner kon niet starten: {e}", flush=True)
+            print(f"[WARNING] QR scanner could not start: {e}", flush=True)
 
     known = load_known(args.known)
 
     if known:
-        print("[INFO] Bekend:", ", ".join(sorted(known.keys())), flush=True)
+        print("[INFO] Known:", ", ".join(sorted(known.keys())), flush=True)
 
         if speak_enabled:
-            tts_enqueue(tts_queue, f"{len(known)} personen geladen.")
+            tts_enqueue(tts_queue, f"{len(known)} people loaded.")
     else:
-        print(f"[WAARSCHUWING] Geen bekende identiteiten in '{args.known}'.", flush=True)
+        print(f"[WARNING] No known identities in '{args.known}'.", flush=True)
 
         if speak_enabled:
-            tts_enqueue(tts_queue, "Ik ken nog niemand.")
+            tts_enqueue(tts_queue, "I do not know anyone yet.")
 
     # Entry/leave state
     present = False
@@ -1003,10 +1003,10 @@ def main():
 
     detection_paused = False
 
-    print(f"[INFO] Detectie-controlbestand: {detection_control.path}", flush=True)
-    print(f"[INFO] Detectie-control poll interval: {args.control_poll_interval:.1f}s", flush=True)
+    print(f"[INFO] Detection control file: {detection_control.path}", flush=True)
+    print(f"[INFO] Detection control poll interval: {args.control_poll_interval:.1f}s", flush=True)
     print(f"[INFO] Settings reload interval: {settings_check_interval:.1f}s", flush=True)
-    print("[INFO] Headless actief. Ctrl+C om te stoppen.", flush=True)
+    print("[INFO] Headless mode is active. Press Ctrl+C to stop.", flush=True)
 
     try:
         while True:
@@ -1019,7 +1019,7 @@ def main():
                         new_volume = max(0, min(100, int(current_settings["voice_volume"])))
                         args.voice_volume = new_volume
                         voice_volume_value.value = new_volume
-                        print(f"[INFO] Settings herladen: volume={args.voice_volume}", flush=True)
+                        print(f"[INFO] Settings reloaded: volume={args.voice_volume}", flush=True)
                     except Exception:
                         pass
                 if "detection_size" in current_settings:
@@ -1028,7 +1028,7 @@ def main():
                         args.detection_size = new_detection_size
                         args.qr_min_face = new_detection_size
                         print(
-                            f"[INFO] Settings herladen: detection_size={args.detection_size}px",
+                            f"[INFO] Settings reloaded: detection_size={args.detection_size}px",
                             flush=True,
                         )
                     except Exception:
@@ -1037,17 +1037,17 @@ def main():
             if not detection_control.enabled():
                 if not detection_paused:
                     print(
-                        "[INFO] Detectie gepauzeerd via configuration. Camera wordt vrijgegeven.",
+                        "[INFO] Detection paused by configuration. Releasing camera.",
                         flush=True,
                     )
 
                     if speak_enabled and tts_queue is not None:
-                        tts_enqueue(tts_queue, "Detectie gepauzeerd.")
+                        tts_enqueue(tts_queue, "Detection paused.")
 
                     if cap is not None:
                         cap.release()
                         cap = None
-                        print("[INFO] Camera vrijgegeven.", flush=True)
+                        print("[INFO] Camera released.", flush=True)
 
                     present = False
                     present_name = None
@@ -1068,17 +1068,17 @@ def main():
 
             if detection_paused:
                 print(
-                    "[INFO] Detectie hervat via configuration. Camera wordt opnieuw geopend.",
+                    "[INFO] Detection resumed by configuration. Reopening camera.",
                     flush=True,
                 )
 
                 if speak_enabled and tts_queue is not None:
-                    tts_enqueue(tts_queue, "Detectie hervat.")
+                    tts_enqueue(tts_queue, "Detection resumed.")
 
                 cap = open_camera_linux(args.cam, args.width, args.height, args.fps)
 
                 if cap is None or not cap.isOpened():
-                    print("[FOUT] Kan camera niet opnieuw openen.", flush=True)
+                    print("[ERROR] Cannot reopen camera.", flush=True)
 
                     if cap is not None:
                         cap.release()
@@ -1090,7 +1090,7 @@ def main():
                 ok, frame = cap.read()
 
                 if not ok or frame is None:
-                    print("[FOUT] Kan eerste frame na hervatten niet lezen.", flush=True)
+                    print("[ERROR] Cannot read first frame after resuming.", flush=True)
 
                     cap.release()
                     cap = None
@@ -1104,7 +1104,7 @@ def main():
                 detection_paused = False
 
             if cap is None or not cap.isOpened():
-                print("[WAARSCHUWING] Camera is niet beschikbaar. Nieuwe poging volgt.", flush=True)
+                print("[WARNING] Camera is unavailable. Retrying.", flush=True)
                 time.sleep(args.control_poll_interval)
                 continue
 
@@ -1125,7 +1125,7 @@ def main():
                         qr_registration["state"] = "waiting_face"
 
                         print(
-                            f"[QR] QR-tekst uitgesproken. Wacht op 1 gezicht op de juiste afstand voor {qr_registration['person']}.",
+                            f"[QR] QR text spoken. Waiting for 1 face at the correct distance for {qr_registration['person']}.",
                             flush=True,
                         )
 
@@ -1133,7 +1133,7 @@ def main():
                         qr_registration["state"] = "waiting_face"
 
                         print(
-                            "[WAARSCHUWING] TTS-proces is gestopt; wachten op gezicht op de juiste afstand.",
+                            "[WARNING] TTS process stopped; waiting for a face at the correct distance.",
                             flush=True,
                         )
 
@@ -1149,7 +1149,7 @@ def main():
                     qr_name = sanitize_person_name(qr_text)
 
                     print(f"[QR] {qr_text}", flush=True)
-                    print(f"[QR] Registratie-map: {os.path.join(args.known, qr_name)}", flush=True)
+                    print(f"[QR] Registration directory: {os.path.join(args.known, qr_name)}", flush=True)
 
                     qr_registration_seq += 1
                     speech_token = f"qr-speech:{qr_registration_seq}"
@@ -1178,12 +1178,12 @@ def main():
                         if not spoken:
                             qr_registration["state"] = "waiting_face"
                             print(
-                                "[WAARSCHUWING] TTS-wachtrij vol; wachten op gezicht op de juiste afstand.",
+                                "[WARNING] TTS queue is full; waiting for a face at the correct distance.",
                                 flush=True,
                             )
                     else:
                         qr_registration["state"] = "waiting_face"
-                        print("[QR] TTS staat uit. Wacht op 1 gezicht op de juiste afstand.", flush=True)
+                        print("[QR] TTS is disabled. Waiting for 1 face at the correct distance.", flush=True)
 
                     break
 
@@ -1206,8 +1206,8 @@ def main():
                 if face_count != 1:
                     if now - qr_registration.get("last_status_at", 0.0) >= 1.0:
                         print(
-                            f"[QR] Wacht op exact 1 gezicht voor {qr_registration['person']} "
-                            f"(gedetecteerd: {face_count}).",
+                            f"[QR] Waiting for exactly 1 face for {qr_registration['person']} "
+                            f"(detected: {face_count}).",
                             flush=True,
                         )
                         qr_registration["last_status_at"] = now
@@ -1218,14 +1218,14 @@ def main():
                 face_size = min(fw, fh)
                 min_face_size, max_face_size = face_size_range(args.detection_size)
 
-                print (f"[QR] Gezicht gedetecteerd voor {qr_registration['person']} ({face_size}px).", flush=True)
+                print(f"[QR] Face detected for {qr_registration['person']} ({face_size}px).", flush=True)
 
                 if face_size < min_face_size or face_size > max_face_size:
                     if now - qr_registration.get("last_status_at", 0.0) >= 1.0:
                         print(
-                            f"[QR] Gezicht niet op juiste afstand voor {qr_registration['person']} "
-                            f"({face_size}px, doel {args.detection_size}px, "
-                            f"bereik {min_face_size}-{max_face_size}px).",
+                            f"[QR] Face is not at the correct distance for {qr_registration['person']} "
+                            f"({face_size}px, target {args.detection_size}px, "
+                            f"range {min_face_size}-{max_face_size}px).",
                             flush=True,
                         )
                         qr_registration["last_status_at"] = now
@@ -1236,7 +1236,7 @@ def main():
                 qr_registration["last_capture_at"] = 0.0
 
                 print(
-                    f"[QR] 1 gezicht op juiste afstand ({face_size}px). Foto's nemen voor "
+                    f"[QR] 1 face is at the correct distance ({face_size}px). Taking photos for "
                     f"{qr_registration['person']}.",
                     flush=True,
                 )
@@ -1247,8 +1247,8 @@ def main():
             if qr_registration is not None and qr_registration["state"] == "capturing" and face_count != 1:
                 if now - qr_registration.get("last_status_at", 0.0) >= 1.0:
                     print(
-                        f"[QR] Foto's gepauzeerd: exact 1 gezicht nodig voor "
-                        f"{qr_registration['person']} (gedetecteerd: {face_count}).",
+                        f"[QR] Photos paused: exactly 1 face is required for "
+                        f"{qr_registration['person']} (detected: {face_count}).",
                         flush=True,
                     )
                     qr_registration["last_status_at"] = now
@@ -1259,7 +1259,7 @@ def main():
                 if qr_registration is not None and qr_registration["state"] == "capturing":
                     if now - qr_registration.get("last_status_at", 0.0) >= 1.0:
                         print(
-                            f"[QR] Wacht op gezicht voor {qr_registration['person']}...",
+                            f"[QR] Waiting for a face for {qr_registration['person']}...",
                             flush=True,
                         )
                         qr_registration["last_status_at"] = now
@@ -1267,7 +1267,7 @@ def main():
                     continue
 
                 if present and now - last_seen >= args.lost_timeout:
-                    print(f"[INFO] {present_name} is uit beeld.", flush=True)
+                    print(f"[INFO] {present_name} left the frame.", flush=True)
 
                     present = False
                     present_name = None
@@ -1291,9 +1291,9 @@ def main():
                 if face_size < min_face_size or face_size > max_face_size:
                     if now - qr_registration.get("last_status_at", 0.0) >= 1.0:
                         print(
-                            f"[QR] Foto's gepauzeerd: gezicht niet op juiste afstand voor "
-                            f"{qr_registration['person']} ({face_size}px, doel {args.detection_size}px, "
-                            f"bereik {min_face_size}-{max_face_size}px).",
+                            f"[QR] Photos paused: face is not at the correct distance for "
+                            f"{qr_registration['person']} ({face_size}px, target {args.detection_size}px, "
+                            f"range {min_face_size}-{max_face_size}px).",
                             flush=True,
                         )
                         qr_registration["last_status_at"] = now
@@ -1306,7 +1306,7 @@ def main():
 
                 if face_size < min_face_size or face_size > max_face_size:
                     if present and now - last_seen >= args.lost_timeout:
-                        print(f"[INFO] {present_name} is uit beeld.", flush=True)
+                        print(f"[INFO] {present_name} left the frame.", flush=True)
 
                         present = False
                         present_name = None
@@ -1322,7 +1322,6 @@ def main():
 
                     continue
 
-            richting = face_direction_nl(x, fw, w)
 
             if qr_registration is not None and qr_registration["state"] == "capturing":
                 if args.qr_capture_interval <= 0 or now - qr_registration["last_capture_at"] >= args.qr_capture_interval:
@@ -1349,7 +1348,7 @@ def main():
                                 known = load_known(args.known)
 
                         except Exception as e:
-                            print(f"[WAARSCHUWING] QR feature extractie mislukt: {e}", flush=True)
+                            print(f"[WARNING] QR feature extraction failed: {e}", flush=True)
 
                         qr_registration["captured"] = idx
                         qr_registration["last_capture_at"] = now
@@ -1358,27 +1357,27 @@ def main():
                             play_qr_click(volume=args.voice_volume)
 
                         print(
-                            f"[OK] QR foto {idx}/{args.qr_photo_count}: {p} "
-                            f"({added_now} feature toegevoegd)",
+                            f"[OK] QR photo {idx}/{args.qr_photo_count}: {p} "
+                            f"({added_now} feature added)",
                             flush=True,
                         )
 
                     except Exception as e:
                         qr_registration["last_capture_at"] = now
-                        print(f"[WAARSCHUWING] QR foto opslaan mislukt: {e}", flush=True)
+                        print(f"[WARNING] Failed to save QR photo: {e}", flush=True)
 
                     if qr_registration["captured"] >= args.qr_photo_count:
                         known = load_known(args.known)
 
                         print(
-                            f"[INFO] QR-registratie klaar voor {qr_registration['person']}: "
-                            f"{qr_registration['captured']} foto('s), "
+                            f"[INFO] QR registration complete for {qr_registration['person']}: "
+                            f"{qr_registration['captured']} photo(s), "
                             f"{qr_registration['features_added']} feature(s).",
                             flush=True,
                         )
 
                         if speak_enabled:
-                            tts_enqueue(tts_queue, f"Registratie klaar voor {qr_registration['person']}")
+                            tts_enqueue(tts_queue, f"Registration complete for {qr_registration['person']}")
 
                         last_qr_announced_at[qr_registration["raw_text"]] = time.time()
 
@@ -1401,11 +1400,11 @@ def main():
             )
 
             # -------------------------
-            # ONBEKEND
+            # UNKNOWN
             # -------------------------
             if not confident:
                 if present and now - last_seen >= args.lost_timeout:
-                    print(f"[INFO] {present_name} is uit beeld.", flush=True)
+                    print(f"[INFO] {present_name} left the frame.", flush=True)
 
                     present = False
                     present_name = None
@@ -1433,18 +1432,18 @@ def main():
 
                     os.makedirs(unknown_dir, exist_ok=True)
 
-                    print(f"[INFO] Onbekende persoon gedetecteerd -> map: {unknown_dir}", flush=True)
+                    print(f"[INFO] Unknown person detected -> directory: {unknown_dir}", flush=True)
 
-                # Deze foto-opslag staat bewust nog uit, zoals in jouw originele code.
+                # This photo storage is intentionally still disabled, as in the original code.
                 # if unknown_dir is not None:
                 #     if now - unknown_last_photo_at >= unknown_photo_interval:
                 #         unknown_photo_count += 1
                 #         p = save_unknown_photo(frame, face, unknown_dir, unknown_photo_count)
                 #         unknown_last_photo_at = now
-                #         print(f"[OK] Unknown foto {unknown_photo_count}/20: {p}", flush=True)
+                #         print(f"[OK] Unknown photo {unknown_photo_count}/20: {p}", flush=True)
 
                 if unknown_photo_count >= 20:
-                    print(f"[INFO] Unknown sessie klaar (20 foto's) -> {unknown_dir}", flush=True)
+                    print(f"[INFO] Unknown session complete (20 photos) -> {unknown_dir}", flush=True)
 
                     last_unknown_handled_at = time.time()
 
@@ -1457,7 +1456,7 @@ def main():
                 continue
 
             # -------------------------
-            # BEKEND
+            # KNOWN
             # -------------------------
             last_seen = now
 
@@ -1493,10 +1492,11 @@ def main():
             present_name = candidate_name
 
             last_announced_at[present_name] = now
+            direction = face_direction_en(x, fw, w)
 
             print(
-                f"[INFO] BINNEN: {present_name} {richting} "
-                f"(score={best_score:.2f}, tweede={second_score:.2f})",
+                f"[INFO] ENTERED: {present_name} {direction} "
+                f"(score={best_score:.2f}, second={second_score:.2f})",
                 flush=True,
             )
 
@@ -1506,16 +1506,16 @@ def main():
                 if now - last_t >= person_photo_cooldown:
                     # p = save_person_snapshot(frame, present_name, out_dir="snapshots")
                     # last_person_photo_at[present_name] = now
-                    # print("[OK] Snapshot opgeslagen:", p, flush=True)
+                    # print("[OK] Snapshot saved:", p, flush=True)
 
                     if speak_enabled:
-                        tts_enqueue(tts_queue, f"Hallo {present_name}")
+                        tts_enqueue(tts_queue, f"Hello {present_name}")
 
                 consec_count = 0
                 candidate_name = None
 
     except KeyboardInterrupt:
-        print("\n[INFO] Stoppen...", flush=True)
+        print("\n[INFO] Stopping...", flush=True)
 
     finally:
         if cap is not None:
