@@ -91,9 +91,9 @@
       </section>
 
       <section class="panel">
-        <h2>Detection Size</h2>
+        <h2>Detection Size (+/- 10%)</h2>
         <form method="post" action="{{ url_for('set_detection_size') }}">
-          <label class="field-label" for="detection_size">Minimum face size in pixels</label>
+          <label class="field-label" for="detection_size">Detection size in pixels</label>
           <div class="volume-row">
             <input id="detection_size_range" type="range" min="1" max="1000" step="1" value="{{ settings.detection_size }}">
             <input id="detection_size" name="detection_size" type="number" min="1" max="1000" step="1" value="{{ settings.detection_size }}">
