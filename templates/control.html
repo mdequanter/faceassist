@@ -11,34 +11,33 @@
     <h2>Detection</h2>
     <div class="status-grid">
       <div>
-          <span class="field-label">Detectie</span>
-          <span class="field-value">
-            {% if detection_enabled %}
-              <span class="pill ok">AAN</span>
-            {% else %}
-              <span class="pill warn">GEPAAUZEERD</span>
-            {% endif %}
-          </span>
-        </div>
-        <div>
-          <span class="field-label">Bestand</span>
-          <span class="field-value"><code>detection_control.json</code></span>
-        </div>
+        <span class="field-label">Detection</span>
+        <span class="field-value">
+          {% if detection_enabled %}
+            <span class="pill ok">On</span>
+          {% else %}
+            <span class="pill warn">pauzed</span>
+          {% endif %}
+        </span>
       </div>
+    </div>
 
-      <div class="actions">
-        {% if detection_enabled %}
-          <form method="post" action="{{ url_for('disable_detection') }}">
-            <button class="btn btn-danger" type="submit">Pauze detectie</button>
-          </form>
-        {% else %}
-          <form method="post" action="{{ url_for('enable_detection') }}">
-            <button class="btn btn-primary" type="submit">Hervat detectie</button>
-          </form>
-        {% endif %}
-        <a class="btn" href="{{ url_for('control_page') }}#nl-launch">Vernieuwen</a>
-    <section class="panel">
-      <h2>Service</h2>
+    <div class="actions">
+      {% if detection_enabled %}
+        <form method="post" action="{{ url_for('disable_detection') }}">
+          <button class="btn btn-danger" type="submit">Pauze detection</button>
+        </form>
+      {% else %}
+        <form method="post" action="{{ url_for('enable_detection') }}">
+          <button class="btn btn-primary" type="submit">Enable detection</button>
+        </form>
+      {% endif %}
+      <a class="btn" href="{{ url_for('control_page') }}#nl-launch">Refresh</a>
+    </div>
+  </section>
+
+  <section class="panel">
+    <h2>Service</h2>
       <div class="status-grid">
         <div>
           <span class="field-label">Unit</span>
