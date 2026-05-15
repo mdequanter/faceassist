@@ -1,7 +1,7 @@
 import os
 
 def list_known_people_with_photos():
-    known_dir = os.path.join(BASE_DIR, "known")
+    known_dir = os.path.join(APP_DIR, "known")
     items = []
     for person in list_known_people():
         person_dir = os.path.join(known_dir, person)
@@ -14,7 +14,7 @@ def list_known_people_with_photos():
     return items
 # ---- Helpers: bekende personen uit known/*.npz ----
 def list_known_people():
-    known_dir = os.path.join(BASE_DIR, "known")
+    known_dir = os.path.join(APP_DIR, "known")
     people = []
     for fn in os.listdir(known_dir):
         if fn.lower().endswith(".npz"):
