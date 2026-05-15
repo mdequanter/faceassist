@@ -8,7 +8,12 @@
     {% for p in people %}
       <div class="card" style="margin:0; display:flex; flex-direction:column; min-height:500px;">
         <h2 style="margin:0 0 6px 0;">{{ p.name }}</h2>
+
         <div class="muted">{{ p.count }} foto's</div>
+          <form action="{{ url_for('known_delete') }}" method="post" style="margin:0;" onsubmit="return confirm('Ben je zeker dat je persoon {{ p.name }} wil verwijderen?');">
+            <input type="hidden" name="person" value="{{ p.name }}">
+            <button class="btn btn-danger" type="submit">Delete person</button>
+          </form>
 
         {% if p.preview %}
           <div style="margin-top:10px; height:320px; width:100%; background:#f6f6f6; border-radius:12px; overflow:hidden;">
@@ -25,10 +30,6 @@
         {% endif %}
 
         <div style="margin-top:10px; display:flex; justify-content:space-between; align-items:center; gap:8px;">
-          <form action="{{ url_for('known_delete') }}" method="post" style="margin:0;" onsubmit="return confirm('Ben je zeker dat je persoon {{ p.name }} wil verwijderen?');">
-            <input type="hidden" name="person" value="{{ p.name }}">
-            <button class="btn btn-danger" type="submit">Delete person</button>
-          </form>
         </div>
       </div>
     {% endfor %}
