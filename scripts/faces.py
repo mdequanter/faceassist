@@ -2,7 +2,7 @@ import os
 
 def list_known_people_with_photos(known_dir: str):
     items = []
-    for person in list_known_people():
+    for person in list_known_people(known_dir):
         person_dir = os.path.join(known_dir, person)
         files = iter_image_files(person_dir) if os.path.isdir(person_dir) else []
         items.append({
