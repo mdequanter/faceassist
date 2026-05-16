@@ -315,6 +315,17 @@ def _system_action_commands(action):
     ]
 
 
+def _shutdown_commands():
+    return [
+        ["sudo", "-n", "shutdown", "-h", "now"],
+        ["shutdown", "-h", "now"],
+        ["sudo", "-n", "poweroff"],
+        ["poweroff"],
+        ["sudo", "-n", "systemctl", "poweroff"],
+        ["systemctl", "poweroff"],
+    ]
+
+
 def _run_system_action_later(cmds):
     def _worker():
         time.sleep(1.0)
@@ -674,7 +685,7 @@ def reboot_system():
 
 @app.route("/shutdown", methods=["POST"])
 def shutdown_system():
-    _run_system_action_later(_system_action_commands("poweroff"))
+    _run_system_action_later(_shutdown_commands())
     return _redirect_with("Jetson shutdown requested.", "ok")
 
 
