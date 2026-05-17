@@ -321,13 +321,13 @@ def _shutdown_commands():
     ]
 
 
-def _run_system_action_later(cmds):
-    def _worker():
-        time.sleep(1.0)
-        _run_first_success(cmds, timeout=30)
-
-    thread = threading.Thread(target=_worker, daemon=True)
-    thread.start()
+#def _run_system_action_later(cmds):
+#    def _worker():
+#        time.sleep(1.0)
+#        _run_first_success(cmds, timeout=30)
+#
+#    thread = threading.Thread(target=_worker, daemon=True)
+#    thread.start()
 
 
 def service_status():
@@ -673,9 +673,30 @@ def set_password():
     return _redirect_with("Admin password changed.", "ok")
 
 
+
+#####################################""
+
+def _run_system_action_later(cmds):
+    def _worker():
+        time.sleep(1.0)
+        for cmd in cmds:
+            try:
+                res = subprocess.run(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, check=False)
+                if res.returncode == 0:
+                    break
+            except Exception:
+                continue
+    t = threading.Thread(target=_worker, daemon=True)
+    t.start()
+
+
 @app.route("/reboot", methods=["POST"])
 def reboot_system():
-    _run_system_action_later(_system_action_commands("reboot"))
+    # Strak: enkel reboot via systemd.
+    _run_system_action_later([
+        ["sudo", "-n", "systemctl", "reboot"],
+        ["systemctl", "reboot"],
+    ])
     return _redirect_with("Jetson reboot requested.", "ok")
 
 
@@ -686,7 +707,11 @@ def shutdown_system():
         ["sudo", "-n", "systemctl", "poweroff"],
         ["systemctl", "poweroff"],
     ])
-    return redirect(url_for("control_page", level="ok", msg="Shutdown requested."))
+    return _redirect_with("Jetson reboot requested.", "ok")
+
+#################################""
+
+
 
 ensure_admin_password_hash()
 app.secret_key = os.environ.get("FACEASSIST_SECRET_KEY", ensure_admin_session_secret())
