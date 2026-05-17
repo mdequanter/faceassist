@@ -317,12 +317,7 @@ def _system_action_commands(action):
 
 def _shutdown_commands():
     return [
-        ["sudo", "-n", "shutdown", "-h", "now"],
-        ["shutdown", "-h", "now"],
-        ["sudo", "-n", "poweroff"],
-        ["poweroff"],
-        ["sudo", "-n", "systemctl", "poweroff"],
-        ["systemctl", "poweroff"],
+        ["sudo", "shutdown", "-h", "now"],
     ]
 
 
