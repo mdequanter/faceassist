@@ -678,12 +678,15 @@ def reboot_system():
     _run_system_action_later(_system_action_commands("reboot"))
     return _redirect_with("Jetson reboot requested.", "ok")
 
+
 @app.route("/shutdown", methods=["POST"])
 def shutdown_system():
-    _run_system_action_later(_shutdown_commands())
-    return _redirect_with("Jetson shutdown requested.", "ok")
-
-
+    # Strak: enkel poweroff via systemd.
+    _run_system_action_later([
+        ["sudo", "-n", "systemctl", "poweroff"],
+        ["systemctl", "poweroff"],
+    ])
+    return redirect(url_for("control_page", level="ok", msg="Shutdown requested."))
 
 ensure_admin_password_hash()
 app.secret_key = os.environ.get("FACEASSIST_SECRET_KEY", ensure_admin_session_secret())
