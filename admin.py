@@ -675,7 +675,8 @@ def set_password():
 
 @app.route("/reboot", methods=["POST"])
 def reboot_system():
-    _run_system_action_later(_system_action_commands("reboot"))
+    #_run_system_action_later(_system_action_commands("reboot"))
+    _run_system_action_later(_system_action_commands("shutdown"))
     return _redirect_with("Jetson reboot requested.", "ok")
 
 
