@@ -707,7 +707,7 @@ def shutdown_system():
         ["sudo", "-n", "systemctl", "poweroff"],
         ["systemctl", "poweroff"],
     ])
-    return _redirect_with("Jetson reboot requested.", "ok")
+    return _redirect_with("Jetson shutdown requested.", "ok")
 
 #################################""
 
