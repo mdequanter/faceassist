@@ -672,7 +672,7 @@ def set_password():
     save_admin_password(new_password)
     return _redirect_with("Admin password changed.", "ok")
 
-
+ 
 
 #####################################""
 
