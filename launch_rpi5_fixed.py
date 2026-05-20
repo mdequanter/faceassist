@@ -898,7 +898,7 @@ def main():
     ap.add_argument(
         "--piper_model",
         type=str,
-        default=os.path.join(BASE_DIR, "voices", "nl_BE-nathalie-medium.onnx"),
+        default=os.path.join(BASE_DIR, "voices", "en_US-amy-medium.onnx"),
     )
     ap.add_argument("--piper_rate", type=int, default=22050)
     ap.add_argument("--piper_rate_auto", action="store_true")
