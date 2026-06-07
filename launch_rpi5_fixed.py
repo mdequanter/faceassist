@@ -188,6 +188,15 @@ def load_settings_json(settings_path: str):
         return {}
 
 
+def coerce_camera_source(value, default_source: str = "standard") -> str:
+    source = str(value or "").strip().lower()
+    if source in ("standard", "usb", "v4l2"):
+        return "standard"
+    if source in ("csi", "csi_cam", "csi-camera"):
+        return "csi"
+    return default_source if default_source in ("standard", "csi") else "standard"
+
+
 def log_detected_face(name: str, face_size: int, log_path: str = DETECTED_FACES_LOG_PATH) -> None:
     try:
         os.makedirs(os.path.dirname(log_path), exist_ok=True)
@@ -210,7 +219,36 @@ def log_detected_face(name: str, face_size: int, log_path: str = DETECTED_FACES_
         print(f"[WARNING] Failed to write detected-face log: {exc}", flush=True)
 
 
-def open_camera_linux(cam_index: int, width: int, height: int, fps: int):
+def csi_gstreamer_pipeline(sensor_id=0, width=1280, height=720, framerate=30, flip_method=0):
+    return (
+        f"nvarguscamerasrc sensor-id={sensor_id} ! "
+        f"video/x-raw(memory:NVMM), width={width}, height={height}, "
+        f"format=NV12, framerate={framerate}/1 ! "
+        f"nvvidconv flip-method={flip_method} ! "
+        "video/x-raw, format=BGRx ! "
+        "videoconvert ! "
+        "video/x-raw, format=BGR ! "
+        "appsink drop=true sync=false max-buffers=1"
+    )
+
+
+def open_camera_linux(cam_index: int, width: int, height: int, fps: int, camera_source: str = "standard"):
+    if camera_source == "csi":
+        cap = cv2.VideoCapture(
+            csi_gstreamer_pipeline(
+                sensor_id=cam_index,
+                width=width,
+                height=height,
+                framerate=fps,
+            ),
+            cv2.CAP_GSTREAMER,
+        )
+
+        if cap.isOpened():
+            print("[INFO] CSI camera opened with GStreamer.", flush=True)
+
+        return cap
+
     dev = f"/dev/video{cam_index}"
 
     gst_pipeline = (
@@ -758,6 +796,12 @@ def main():
 
     # Camera and detection
     ap.add_argument("--cam", type=int, default=0)
+    ap.add_argument(
+        "--camera_source",
+        choices=("standard", "csi"),
+        default=coerce_camera_source(settings.get("camera_source", "standard")),
+        help="Camera source: standard uses /dev/videoN, csi uses nvarguscamerasrc.",
+    )
     ap.add_argument("--width", type=int, default=640)
     ap.add_argument("--height", type=int, default=480)
     ap.add_argument("--fps", type=int, default=15)
@@ -967,7 +1011,7 @@ def main():
     cap = None
 
     # Camera
-    cap = open_camera_linux(args.cam, args.width, args.height, args.fps)
+    cap = open_camera_linux(args.cam, args.width, args.height, args.fps, args.camera_source)
 
     if cap is None or not cap.isOpened():
         print("[ERROR] Cannot open camera.", flush=True)
@@ -1099,6 +1143,47 @@ def main():
                         )
                     except Exception:
                         pass
+                if "camera_source" in current_settings:
+                    new_camera_source = coerce_camera_source(
+                        current_settings["camera_source"],
+                        args.camera_source,
+                    )
+                    if new_camera_source != args.camera_source:
+                        args.camera_source = new_camera_source
+                        if cap is None or not cap.isOpened():
+                            print(
+                                f"[INFO] Settings reloaded: camera_source={args.camera_source}.",
+                                flush=True,
+                            )
+                            continue
+
+                        print(
+                            f"[INFO] Settings reloaded: camera_source={args.camera_source}. Reopening camera.",
+                            flush=True,
+                        )
+
+                        if cap is not None:
+                            cap.release()
+                            cap = None
+
+                        cap = open_camera_linux(args.cam, args.width, args.height, args.fps, args.camera_source)
+
+                        if cap is None or not cap.isOpened():
+                            print("[ERROR] Cannot reopen camera after camera source change.", flush=True)
+                            time.sleep(args.control_poll_interval)
+                            continue
+
+                        ok, frame = cap.read()
+
+                        if not ok or frame is None:
+                            print("[ERROR] Cannot read first frame after camera source change.", flush=True)
+                            cap.release()
+                            cap = None
+                            time.sleep(args.control_poll_interval)
+                            continue
+
+                        h, w = frame.shape[:2]
+                        detector.setInputSize((w, h))
 
             if not detection_control.enabled():
                 if not detection_paused:
@@ -1141,7 +1226,7 @@ def main():
                 if speak_enabled and tts_queue is not None:
                     tts_enqueue(tts_queue, "Detection resumed.")
 
-                cap = open_camera_linux(args.cam, args.width, args.height, args.fps)
+                cap = open_camera_linux(args.cam, args.width, args.height, args.fps, args.camera_source)
 
                 if cap is None or not cap.isOpened():
                     print("[ERROR] Cannot reopen camera.", flush=True)

@@ -58,10 +58,24 @@ def _default_detection_size():
     return _coerce_detection_size(os.environ.get("DETECTION_SIZE", "80"), 80)
 
 
+def _coerce_camera_source(value, default_value="standard"):
+    source = str(value or "").strip().lower()
+    if source in ("standard", "usb", "v4l2"):
+        return "standard"
+    if source in ("csi", "csi_cam", "csi-camera"):
+        return "csi"
+    return default_value if default_value in ("standard", "csi") else "standard"
+
+
+def _default_camera_source():
+    return _coerce_camera_source(os.environ.get("FACEASSIST_CAMERA_SOURCE", "standard"))
+
+
 def _default_settings():
     return {
         "voice_volume": _default_voice_volume(),
         "detection_size": _default_detection_size(),
+        "camera_source": _default_camera_source(),
     }
 
 
@@ -113,8 +127,13 @@ def load_settings():
         settings.get("detection_size", _default_detection_size()),
         _default_detection_size(),
     )
+    settings["camera_source"] = _coerce_camera_source(
+        settings.get("camera_source", _default_camera_source()),
+        _default_camera_source(),
+    )
     merged["voice_volume"] = settings["voice_volume"]
     merged["detection_size"] = settings["detection_size"]
+    merged["camera_source"] = settings["camera_source"]
     return merged
 
 
@@ -171,6 +190,17 @@ def save_detection_size(size):
 
     _write_settings(settings)
     return settings["detection_size"]
+
+
+def save_camera_source(camera_source):
+    settings = load_settings()
+    settings["camera_source"] = _coerce_camera_source(
+        camera_source,
+        settings.get("camera_source", _default_camera_source()),
+    )
+
+    _write_settings(settings)
+    return settings["camera_source"]
 
 
 def detection_enabled():
@@ -652,6 +682,17 @@ def set_detection_size():
     except Exception as exc:
         return _redirect_with(f"Detection size save failed: {exc}", "error")
     return _redirect_with(f"Detection size saved at {size}px.", "ok")
+
+
+@app.route("/camera-source", methods=["POST"])
+def set_camera_source():
+    try:
+        camera_source = save_camera_source(request.form.get("camera_source"))
+    except Exception as exc:
+        return _redirect_with(f"Camera source save failed: {exc}", "error")
+
+    label = "CSI camera" if camera_source == "csi" else "standard camera"
+    return _redirect_with(f"Camera source saved: {label}.", "ok")
 
 
 @app.route("/password", methods=["POST"])

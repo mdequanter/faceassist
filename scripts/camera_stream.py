@@ -16,6 +16,18 @@ def load_detection_size(settings_path: str, default_size: int = 80) -> int:
     return max(1, min(1000, size))
 
 
+def load_camera_source(settings_path: str, default_source: str = "standard") -> str:
+    try:
+        with open(settings_path, "r", encoding="utf-8") as f:
+            data = json.load(f)
+        source = str(data.get("camera_source", default_source)) if isinstance(data, dict) else default_source
+    except Exception:
+        source = default_source
+
+    source = source.strip().lower()
+    return "csi" if source == "csi" else "standard"
+
+
 def face_size_range(target_size: int, tolerance: float = 0.20):
     target = max(1, int(target_size))
     delta = max(1, int(round(target * float(tolerance))))
@@ -90,7 +102,36 @@ def best_match(recognizer, feat, known: dict):
     return best_name, best_score, second_score
 
 
-def open_preview_camera(cam_index=0, width=640, height=480, fps=15):
+def csi_gstreamer_pipeline(sensor_id=0, width=1280, height=720, framerate=30, flip_method=0):
+    return (
+        f"nvarguscamerasrc sensor-id={sensor_id} ! "
+        f"video/x-raw(memory:NVMM), width={width}, height={height}, "
+        f"format=NV12, framerate={framerate}/1 ! "
+        f"nvvidconv flip-method={flip_method} ! "
+        "video/x-raw, format=BGRx ! "
+        "videoconvert ! "
+        "video/x-raw, format=BGR ! "
+        "appsink drop=true sync=false max-buffers=1"
+    )
+
+
+def open_preview_camera(cam_index=0, width=640, height=480, fps=15, camera_source="standard"):
+    if camera_source == "csi":
+        cap = cv2.VideoCapture(
+            csi_gstreamer_pipeline(
+                sensor_id=cam_index,
+                width=width,
+                height=height,
+                framerate=fps,
+            ),
+            cv2.CAP_GSTREAMER,
+        )
+
+        if cap.isOpened():
+            print("[INFO] Preview CSI-camera geopend via GStreamer.", flush=True)
+
+        return cap
+
     cap = cv2.VideoCapture(cam_index, cv2.CAP_V4L2)
 
     if cap.isOpened():
@@ -118,12 +159,16 @@ def generate_camera_frames(
     fps=15,
     smartvision=False,
     preview_opacity=0.08,
+    camera_source=None,
 ):
     cap = None
+    base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    settings_path = os.path.join(base_dir, "settings.json")
+    selected_camera_source = camera_source or load_camera_source(settings_path)
     camera_deadline = time.time() + 20.0
 
     while time.time() < camera_deadline:
-        cap = open_preview_camera(cam_index, width, height, fps)
+        cap = open_preview_camera(cam_index, width, height, fps, selected_camera_source)
 
         if cap is not None and cap.isOpened():
             break
@@ -137,9 +182,7 @@ def generate_camera_frames(
         print("[FOUT] Preview camera kon niet geopend worden.", flush=True)
         return
 
-    BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-    yunet_path = os.path.join(BASE_DIR, "models", "face_detection_yunet_2023mar.onnx")
-    settings_path = os.path.join(BASE_DIR, "settings.json")
+    yunet_path = os.path.join(base_dir, "models", "face_detection_yunet_2023mar.onnx")
 
     try:
         h, w = height, width
@@ -152,10 +195,10 @@ def generate_camera_frames(
             5000,  # topk
         )
 
-        sface_path = os.path.join(BASE_DIR, "models", "face_recognition_sface_2021dec.onnx")
+        sface_path = os.path.join(base_dir, "models", "face_recognition_sface_2021dec.onnx")
         recognizer = cv2.FaceRecognizerSF.create(sface_path, "")
 
-        known_dir = os.path.join(BASE_DIR, "known")
+        known_dir = os.path.join(base_dir, "known")
         known = load_known(known_dir)
 
         while True:

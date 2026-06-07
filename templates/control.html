@@ -105,6 +105,23 @@
       </section>
 
       <section class="panel">
+        <h2>Camera</h2>
+        <form method="post" action="{{ url_for('set_camera_source') }}">
+          <label class="field-label" for="camera_source">Camera source</label>
+          <select id="camera_source" name="camera_source">
+            <option value="standard" {% if settings.camera_source == "standard" %}selected{% endif %}>Standard camera</option>
+            <option value="csi" {% if settings.camera_source == "csi" %}selected{% endif %}>CSI camera</option>
+          </select>
+          <p class="muted">
+            Pause and enable detection again after changing this when detection is already running.
+          </p>
+          <div class="actions">
+            <button class="btn btn-primary" type="submit">Save camera</button>
+          </div>
+        </form>
+      </section>
+
+      <section class="panel">
         <h2>Admin Password</h2>
         <form method="post" action="{{ url_for('set_password') }}">
           <label class="field-label" for="current_password">Current password</label>
