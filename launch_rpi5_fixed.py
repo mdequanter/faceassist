@@ -219,15 +219,14 @@ def log_detected_face(name: str, face_size: int, log_path: str = DETECTED_FACES_
         print(f"[WARNING] Failed to write detected-face log: {exc}", flush=True)
 
 
-def csi_gstreamer_pipeline(sensor_id=0, width=1280, height=720, framerate=30, flip_method=0):
+def csi_gstreamer_pipeline(sensor_id=0, width=1280, height=720, framerate=30):
     return (
         f"nvarguscamerasrc sensor-id={sensor_id} ! "
-        f"video/x-raw(memory:NVMM), width={width}, height={height}, "
-        f"format=NV12, framerate={framerate}/1 ! "
-        f"nvvidconv flip-method={flip_method} ! "
-        "video/x-raw, format=BGRx ! "
+        f"video/x-raw(memory:NVMM),width={width},height={height},framerate={framerate}/1 ! "
+        "nvvidconv ! "
+        "video/x-raw,format=BGRx ! "
         "videoconvert ! "
-        "video/x-raw, format=BGR ! "
+        "video/x-raw,format=BGR ! "
         "appsink drop=true sync=false max-buffers=1"
     )
 
@@ -237,9 +236,6 @@ def open_camera_linux(cam_index: int, width: int, height: int, fps: int, camera_
         cap = cv2.VideoCapture(
             csi_gstreamer_pipeline(
                 sensor_id=cam_index,
-                width=width,
-                height=height,
-                framerate=fps,
             ),
             cv2.CAP_GSTREAMER,
         )

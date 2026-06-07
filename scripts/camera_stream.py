@@ -102,15 +102,14 @@ def best_match(recognizer, feat, known: dict):
     return best_name, best_score, second_score
 
 
-def csi_gstreamer_pipeline(sensor_id=0, width=1280, height=720, framerate=30, flip_method=0):
+def csi_gstreamer_pipeline(sensor_id=0, width=1280, height=720, framerate=30):
     return (
         f"nvarguscamerasrc sensor-id={sensor_id} ! "
-        f"video/x-raw(memory:NVMM), width={width}, height={height}, "
-        f"format=NV12, framerate={framerate}/1 ! "
-        f"nvvidconv flip-method={flip_method} ! "
-        "video/x-raw, format=BGRx ! "
+        f"video/x-raw(memory:NVMM),width={width},height={height},framerate={framerate}/1 ! "
+        "nvvidconv ! "
+        "video/x-raw,format=BGRx ! "
         "videoconvert ! "
-        "video/x-raw, format=BGR ! "
+        "video/x-raw,format=BGR ! "
         "appsink drop=true sync=false max-buffers=1"
     )
 
@@ -120,9 +119,6 @@ def open_preview_camera(cam_index=0, width=640, height=480, fps=15, camera_sourc
         cap = cv2.VideoCapture(
             csi_gstreamer_pipeline(
                 sensor_id=cam_index,
-                width=width,
-                height=height,
-                framerate=fps,
             ),
             cv2.CAP_GSTREAMER,
         )
