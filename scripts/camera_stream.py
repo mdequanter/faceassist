@@ -153,7 +153,7 @@ def open_preview_camera(cam_index=0, width=640, height=480, fps=15, camera_sourc
 
 
 def generate_camera_frames(
-    cam_index=0,
+    cam_index=1,
     width=640,
     height=480,
     fps=15,
