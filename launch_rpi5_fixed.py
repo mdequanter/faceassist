@@ -219,31 +219,35 @@ def log_detected_face(name: str, face_size: int, log_path: str = DETECTED_FACES_
         print(f"[WARNING] Failed to write detected-face log: {exc}", flush=True)
 
 
-def csi_gstreamer_pipeline(sensor_id=0, width=1280, height=720, framerate=30):
-    return (
+def csi_gstreamer_pipelines(sensor_id=0, width=1280, height=720, framerate=30):
+    source = (
         f"nvarguscamerasrc sensor-id={sensor_id} ! "
         f"video/x-raw(memory:NVMM),width={width},height={height},framerate={framerate}/1 ! "
-        "nvvidconv ! "
-        "video/x-raw,format=BGRx ! "
-        "videoconvert ! "
-        "video/x-raw,format=BGR ! "
-        "appsink drop=true sync=false max-buffers=1"
     )
+    sink = "appsink drop=true sync=false max-buffers=1"
+    return [
+        source + "nvvidconv ! video/x-raw,format=BGRx ! videoconvert ! video/x-raw,format=BGR ! " + sink,
+        source + "nvvidconv ! videoconvert ! video/x-raw,format=BGR ! " + sink,
+        source + "nvvidconv ! video/x-raw,format=I420 ! videoconvert ! video/x-raw,format=BGR ! " + sink,
+    ]
 
 
 def open_camera_linux(cam_index: int, width: int, height: int, fps: int, camera_source: str = "standard"):
     if camera_source == "csi":
-        cap = cv2.VideoCapture(
-            csi_gstreamer_pipeline(
-                sensor_id=cam_index,
-            ),
-            cv2.CAP_GSTREAMER,
-        )
+        for pipeline in csi_gstreamer_pipelines(sensor_id=cam_index):
+            print(f"[INFO] CSI pipeline attempt: {pipeline}", flush=True)
+            cap = cv2.VideoCapture(pipeline, cv2.CAP_GSTREAMER)
 
-        if cap.isOpened():
-            print("[INFO] CSI camera opened with GStreamer.", flush=True)
+            if cap.isOpened():
+                ok, frame = cap.read()
+                if ok and frame is not None:
+                    print("[INFO] CSI camera opened with GStreamer.", flush=True)
+                    return cap
 
-        return cap
+            if cap is not None:
+                cap.release()
+
+        return None
 
     dev = f"/dev/video{cam_index}"
 
